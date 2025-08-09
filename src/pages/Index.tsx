@@ -1,13 +1,20 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { Helmet } from "react-helmet-async";
+import Hero from "@/components/home/Hero";
+import FeatureGrid from "@/components/home/FeatureGrid";
+import Testimonials from "@/components/home/Testimonials";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <main>
+      <Helmet>
+        <title>HappyTails – Pet Health Management</title>
+        <meta name="description" content="Find vets, check symptoms with AI, manage pet records, and learn trusted care tips—friendly and professional." />
+        <link rel="canonical" href="/" />
+      </Helmet>
+      <Hero />
+      <FeatureGrid />
+      <Testimonials />
+    </main>
   );
 };
 
