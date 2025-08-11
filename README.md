@@ -1,4 +1,41 @@
-# Welcome to your Lovable project
+# HappyTails Pet Health Management Platform
+
+## Project Structure
+
+This project has been organized into a monorepo structure:
+
+```
+happytails/
+├── frontend/          # React frontend application
+│   ├── src/
+│   ├── public/
+│   ├── package.json
+│   └── ...
+├── package.json       # Root package.json for monorepo management
+└── README.md
+```
+
+## Quick Start
+
+### Development
+
+From the root directory:
+```bash
+npm run dev
+```
+
+Or run frontend directly:
+```bash
+cd frontend
+npm run dev
+```
+
+### Available Scripts
+
+- `npm run dev` - Start the frontend development server
+- `npm run build` - Build the frontend for production
+- `npm run preview` - Preview the production build
+- `npm run lint` - Run ESLint on the frontend code
 
 ## Project info
 
