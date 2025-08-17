@@ -1,4 +1,50 @@
-# HappyTails Pet Health Management Platform
+# 🐾 HappyTails - Pet Health Management Platform
+
+A comprehensive pet health management platform with AI-powered symptom checking, email-based role system, and modern responsive design.
+
+## ✨ Features
+
+### 🔐 Email-Based Role System
+- **Guest Users**: Limited access with 3 free symptom checks
+- **Basic Users**: Essential features including unlimited symptom checker
+- **Premium Users**: Access to most features including pet records
+- **Veterinarians**: Full access including professional dashboard
+
+### 🏥 Core Functionality
+- **AI Symptom Checker**: Analyze pet symptoms with detailed recommendations
+- **Vet Finder**: Locate and connect with trusted veterinarians
+- **Pet Records**: Manage your pet's health information (Premium+)
+- **Vet Dashboard**: Professional tools for veterinarians
+- **Resources**: Educational content for pet care
+- **Responsive Design**: Works seamlessly on all devices
+
+### 🎨 Modern UI/UX
+- Beautiful gradient designs with purple-pink theme
+- Glass-morphism effects and smooth animations
+- Interactive loading states and user feedback
+- Custom paw print favicon and real pet photography
+
+## 🚀 Demo Accounts
+
+Try different access levels with these email addresses:
+
+| Email | Role | Features |
+|-------|------|----------|
+| `vet@happytails.com` | Veterinarian | 🟢 Full access to all features |
+| `premium@test.com` | Premium | 🟡 Most features + Pet Records |
+| `user@test.com` | Basic | 🔵 Essential features |
+| `any.email@example.com` | Basic | 🔵 Default access level |
+
+*Password: Any password works for demo purposes*
+
+## 🛠️ Tech Stack
+
+- **Frontend**: React 18, TypeScript, Vite
+- **Styling**: Tailwind CSS, shadcn/ui components
+- **Authentication**: Custom email-based role system
+- **Routing**: React Router v6 with protected routes
+- **State Management**: Context API
+- **Icons**: Lucide React, Custom SVG assets
 
 ## Project Structure
 
