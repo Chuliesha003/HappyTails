@@ -25,13 +25,10 @@ const GetStarted = () => {
   // Get predicted role based on email
   const getPredictedRole = (email: string) => {
     const emailLower = email.toLowerCase();
-    if (emailLower.includes('vet@happytails.com') || emailLower.includes('dr.') || emailLower.includes('admin@')) {
-      return { role: 'Veterinarian', color: 'text-green-600', features: 'Full access to all features' };
+    if (emailLower.includes('admin@happytails.com') || emailLower === 'demo.admin@happytails.com') {
+      return { role: 'Admin', color: 'text-green-600', features: 'Full administrative access' };
     }
-    if (emailLower.includes('premium@') || emailLower.includes('john.doe@') || emailLower.includes('sarah.wilson@')) {
-      return { role: 'Premium', color: 'text-purple-600', features: 'Access to most features' };
-    }
-    return { role: 'Basic', color: 'text-blue-600', features: 'Essential features included' };
+    return { role: 'User', color: 'text-blue-600', features: 'Full access to pet health features' };
   };
 
   const predictedRole = email ? getPredictedRole(email) : null;
@@ -162,11 +159,11 @@ const GetStarted = () => {
 
           {/* Email Role Information */}
           <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <h4 className="font-medium text-sm text-blue-800 mb-2">🎯 Email-Based Access Levels</h4>
+            <h4 className="font-medium text-sm text-blue-800 mb-2">🎯 Account Access Levels</h4>
             <div className="text-xs text-blue-700 space-y-1">
-              <div>• <strong>Veterinarian emails</strong> (vet@, dr.*, admin@): Full access</div>
-              <div>• <strong>Premium emails</strong> (premium@, john.doe@, etc.): Most features</div>
-              <div>• <strong>Other emails</strong>: Basic access with essential features</div>
+              <div>• <strong>Admin accounts</strong>: Full platform management access</div>
+              <div>• <strong>Regular users</strong>: Complete pet health management features</div>
+              <div>• <strong>Guest users</strong>: Limited access with symptom checker (2 uses)</div>
             </div>
           </div>
           

@@ -17,13 +17,6 @@ const Login = () => {
   
   const from = location.state?.from || "/";
 
-  // Demo email addresses for testing
-  const demoEmails = [
-    { email: 'vet@happytails.com', role: 'Veterinarian', color: 'text-green-600' },
-    { email: 'premium@test.com', role: 'Premium', color: 'text-purple-600' },
-    { email: 'user@test.com', role: 'Basic', color: 'text-blue-600' },
-  ];
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -33,21 +26,22 @@ const Login = () => {
       return;
     }
     
-    const success = await login(email, password || 'demo123');
-    if (success) {
-      navigate(from, { replace: true });
-    } else {
-      setError("Login failed. Please try again.");
+    if (!password.trim()) {
+      setError("Please enter your password.");
+      return;
     }
-  };
-
-  const handleDemoLogin = async (demoEmail: string) => {
-    setEmail(demoEmail);
-    setError("");
     
-    const success = await login(demoEmail, 'demo123');
+    const success = await login(email, password);
     if (success) {
-      navigate(from, { replace: true });
+      // Redirect based on user role
+      const emailLower = email.toLowerCase();
+      if (emailLower === 'admin@happytails.com' || emailLower === 'demo.admin@happytails.com') {
+        navigate('/admin-dashboard', { replace: true });
+      } else {
+        navigate('/user-dashboard', { replace: true });
+      }
+    } else {
+      setError("Invalid email or password. Please check your credentials.");
     }
   };
 
@@ -82,44 +76,18 @@ const Login = () => {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter password (optional for demo)"
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
               />
-              <p className="text-xs text-muted-foreground">
-                For demo: Any password works, or leave blank
-              </p>
             </div>
             <Button type="submit" className="w-full" variant="brand" disabled={isLoading}>
               {isLoading ? "Signing In..." : "Sign In"}
             </Button>
           </form>
 
-          {/* Demo Email Options */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-medium text-sm text-gray-700 mb-3">🎯 Email-Based Role System</h4>
-            <div className="space-y-2">
-              {demoEmails.map((demo, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleDemoLogin(demo.email)}
-                  className="w-full text-left p-2 rounded-md hover:bg-white border border-gray-200 hover:border-gray-300 transition-colors"
-                  disabled={isLoading}
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="text-sm font-medium">{demo.email}</div>
-                      <div className={`text-xs ${demo.color}`}>{demo.role} Access</div>
-                    </div>
-                    <div className="text-xs text-gray-500">Click to login</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 mt-3">
-              💡 Your access level is determined by your email address. Any unlisted email gets Basic access.
-            </p>
-          </div>
+
           
           {error && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
@@ -138,6 +106,14 @@ const Login = () => {
               Sign up
             </Link>
           </div>
+          
+          {/* Subtle demo hint */}
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg border">
+            <p className="text-xs text-gray-600 text-center">
+              💡 <strong>Demo Mode:</strong> Admin: demo.admin@happytails.com | User: demo.user@happytails.com (password: demo123)
+            </p>
+          </div>
+          
           <div className="mt-6 text-center">
             <Link to="/" className="text-sm text-muted-foreground hover:underline">
               ← Back to home

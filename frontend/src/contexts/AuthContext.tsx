@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type UserRole = 'guest' | 'basic' | 'premium' | 'veterinarian';
+export type UserRole = 'guest' | 'registered' | 'admin';
 
 export interface User {
   id?: string;
@@ -26,8 +26,7 @@ interface AuthContextType extends AuthState {
   canAccessFeature: (feature: string) => boolean;
   isRegistered: () => boolean;
   isGuest: () => boolean;
-  isPremium: () => boolean;
-  isVeterinarian: () => boolean;
+  isAdmin: () => boolean;
   getUserRole: () => UserRole;
 }
 
@@ -39,52 +38,38 @@ export interface RegisterData {
   password: string;
 }
 
-// Email-based role configuration
-const EMAIL_ROLES: Record<string, { role: UserRole; features: string[] }> = {
-  // Veterinarian accounts (full access)
-  'vet@happytails.com': { 
-    role: 'veterinarian', 
-    features: ['symptom-checker', 'vet-finder', 'pet-records', 'vet-dashboard', 'premium-support', 'analytics'] 
-  },
-  'dr.smith@vetclinic.com': { 
-    role: 'veterinarian', 
-    features: ['symptom-checker', 'vet-finder', 'pet-records', 'vet-dashboard', 'premium-support', 'analytics'] 
-  },
+// Email-based role configuration with specific credentials
+const EMAIL_ROLES: Record<string, { role: UserRole; features: string[]; password?: string }> = {
+  // Admin accounts (full access)
   'admin@happytails.com': { 
-    role: 'veterinarian', 
-    features: ['symptom-checker', 'vet-finder', 'pet-records', 'vet-dashboard', 'premium-support', 'analytics'] 
+    role: 'admin', 
+    features: ['symptom-checker', 'vet-finder', 'pet-records', 'admin-dashboard'],
+    password: 'admin123'
   },
-  
-  // Premium user accounts (most features)
-  'premium@test.com': { 
-    role: 'premium', 
-    features: ['symptom-checker', 'vet-finder', 'pet-records', 'premium-support'] 
+
+  // Demo admin account
+  'demo.admin@happytails.com': { 
+    role: 'admin', 
+    features: ['symptom-checker', 'vet-finder', 'pet-records', 'admin-dashboard'],
+    password: 'demo123'
   },
-  'john.doe@gmail.com': { 
-    role: 'premium', 
-    features: ['symptom-checker', 'vet-finder', 'pet-records', 'premium-support'] 
+
+  // Regular user accounts
+  'user@happytails.com': { 
+    role: 'registered', 
+    features: ['symptom-checker', 'vet-finder', 'pet-records', 'user-dashboard'],
+    password: 'user123'
   },
-  'sarah.wilson@email.com': { 
-    role: 'premium', 
-    features: ['symptom-checker', 'vet-finder', 'pet-records', 'premium-support'] 
+
+  // Demo user accounts
+  'demo.user@happytails.com': { 
+    role: 'registered', 
+    features: ['symptom-checker', 'vet-finder', 'pet-records', 'user-dashboard'],
+    password: 'demo123'
   },
-  
-  // Basic user accounts (limited features)
-  'user@test.com': { 
-    role: 'basic', 
-    features: ['symptom-checker', 'vet-finder'] 
-  },
-  'basic@example.com': { 
-    role: 'basic', 
-    features: ['symptom-checker', 'vet-finder'] 
-  },
-  'demo@happytails.com': { 
-    role: 'basic', 
-    features: ['symptom-checker', 'vet-finder'] 
-  }
 };
 
-const DEFAULT_BASIC_FEATURES = ['symptom-checker', 'vet-finder'];
+const DEFAULT_REGISTERED_FEATURES = ['symptom-checker', 'vet-finder', 'pet-records', 'user-dashboard'];
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -132,23 +117,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       let loggedInUser: User;
       if (emailConfig) {
+        // Validate password for configured accounts
+        if (emailConfig.password && password !== emailConfig.password) {
+          return false; // Invalid password
+        }
+        
         // Use configured role and features
+        const getFullName = (email: string, role: UserRole) => {
+          if (email === 'admin@happytails.com') return 'Administrator';
+          if (email === 'demo.admin@happytails.com') return 'Demo Administrator';
+          if (email === 'user@happytails.com') return 'User';
+          if (email === 'demo.user@happytails.com') return 'Demo User';
+          
+          // Generate name from email
+          const namePart = email.split('@')[0].replace(/[._]/g, ' ');
+          return namePart.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        };
+
         loggedInUser = {
           id: Date.now().toString(),
           email,
-          fullName: emailConfig.role === 'veterinarian' ? 'Dr. ' + email.split('@')[0] : 
-                    emailConfig.role === 'premium' ? 'Premium User' : 'Basic User',
+          fullName: getFullName(email, emailConfig.role),
           role: emailConfig.role,
           features: emailConfig.features
         };
       } else {
-        // Default to basic user for unlisted emails
+        // Default to registered user for unlisted emails
         loggedInUser = {
           id: Date.now().toString(),
           email,
-          fullName: 'Basic User',
-          role: 'basic',
-          features: DEFAULT_BASIC_FEATURES
+          fullName: 'Registered User',
+          role: 'registered',
+          features: DEFAULT_REGISTERED_FEATURES
         };
       }
       
@@ -186,13 +186,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           features: emailConfig.features
         };
       } else {
-        // Default to basic user for unlisted emails
+        // Default to registered user for unlisted emails
         newUser = {
           id: Date.now().toString(),
           email: userData.email,
           fullName: userData.fullName,
-          role: 'basic',
-          features: DEFAULT_BASIC_FEATURES
+          role: 'registered',
+          features: DEFAULT_REGISTERED_FEATURES
         };
       }
       
@@ -239,8 +239,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const isRegistered = (): boolean => user?.role !== 'guest' && user?.role !== undefined;
   const isGuest = (): boolean => user?.role === 'guest';
-  const isPremium = (): boolean => user?.role === 'premium';
-  const isVeterinarian = (): boolean => user?.role === 'veterinarian';
+  const isAdmin = (): boolean => user?.role === 'admin';
   const getUserRole = (): UserRole => user?.role || 'guest';
 
   const value: AuthContextType = {
@@ -256,8 +255,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     canAccessFeature,
     isRegistered,
     isGuest,
-    isPremium,
-    isVeterinarian,
+    isAdmin,
     getUserRole
   };
 

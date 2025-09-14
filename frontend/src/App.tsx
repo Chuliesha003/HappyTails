@@ -19,7 +19,8 @@ import NotFound from "./pages/NotFound";
 import Vets from "./pages/Vets";
 import PetRecords from "./pages/PetRecords";
 import Resources from "./pages/Resources";
-import VetDashboard from "./pages/VetDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import UserDashboard from "./pages/UserDashboard";
 import Login from "./pages/Login";
 import GetStarted from "./pages/GetStarted";
 import BookAppointment from "./pages/BookAppointment";
@@ -305,7 +306,8 @@ const queryClient = new QueryClient();
 // Create protected versions of components with feature requirements
 const ProtectedVets = withAuth(Vets, { requiredFeature: 'vet-finder' });
 const ProtectedPetRecords = withAuth(PetRecords, { requiredFeature: 'pet-records' });
-const ProtectedVetDashboard = withAuth(VetDashboard, { requiredFeature: 'vet-dashboard' });
+const ProtectedAdminDashboard = withAuth(AdminDashboard, { requiredFeature: 'admin-dashboard' });
+const ProtectedUserDashboard = withAuth(UserDashboard, { requiredFeature: 'user-dashboard' });
 
 const AppContent = () => {
   const location = useLocation();
@@ -323,7 +325,8 @@ const AppContent = () => {
         <Route path="/book-appointment" element={<BookAppointment />} />
         <Route path="/pet-records" element={<ProtectedPetRecords />} />
         <Route path="/resources" element={<Resources />} />
-        <Route path="/vet-dashboard" element={<ProtectedVetDashboard />} />
+        <Route path="/admin-dashboard" element={<ProtectedAdminDashboard />} />
+        <Route path="/user-dashboard" element={<ProtectedUserDashboard />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       {!hideFooter && <SiteFooter />}

@@ -1,4 +1,4 @@
-import { PawPrint, Stethoscope, BookOpen, CalendarDays, FileText, LogOut } from "lucide-react";
+import { PawPrint, Stethoscope, BookOpen, CalendarDays, FileText, LogOut, Settings, User } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,11 +8,15 @@ const navItems = [
   { to: "/vets", label: "Find a Vet", icon: CalendarDays },
   { to: "/pet-records", label: "Pet Records", icon: FileText },
   { to: "/resources", label: "Resources", icon: BookOpen },
-  { to: "/vet-dashboard", label: "Vet Dashboard", icon: PawPrint },
+];
+
+const dashboardItems = [
+  { to: "/admin-dashboard", label: "Admin Dashboard", icon: Settings, role: "admin" },
+  { to: "/user-dashboard", label: "Dashboard", icon: User, role: "registered" },
 ];
 
 const SiteHeader = () => {
-  const { isRegistered, user, logout, canAccessFeature, getUserRole } = useAuth();
+  const { isRegistered, user, logout, canAccessFeature, getUserRole, isAdmin } = useAuth();
   const userRole = getUserRole();
   
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
@@ -22,7 +26,7 @@ const SiteHeader = () => {
 
   // Filter navigation items based on user permissions
   const getVisibleNavItems = () => {
-    return navItems.filter(item => {
+    const visibleNavItems = navItems.filter(item => {
       // Always show symptom checker and resources
       if (item.to === "/symptom-checker" || item.to === "/resources") {
         return true;
@@ -31,26 +35,36 @@ const SiteHeader = () => {
       // Check feature access for other items
       const featureMap: Record<string, string> = {
         "/vets": "vet-finder",
-        "/pet-records": "pet-records", 
-        "/vet-dashboard": "vet-dashboard"
+        "/pet-records": "pet-records"
       };
       
       const requiredFeature = featureMap[item.to];
       return requiredFeature ? canAccessFeature(requiredFeature) : false;
     });
+
+    // Add dashboard items at the beginning if user is logged in
+    if (isRegistered()) {
+      const userDashboards = dashboardItems.filter(item => {
+        if (item.role === "admin" && isAdmin()) return true;
+        if (item.role === "registered" && !isAdmin() && isRegistered()) return true;
+        return false;
+      });
+      return [...userDashboards, ...visibleNavItems];
+    }
+
+    return visibleNavItems;
   };
 
   const getRoleBadge = () => {
     const roleColors = {
       'guest': 'bg-gray-100 text-gray-800',
-      'basic': 'bg-blue-100 text-blue-800',
-      'premium': 'bg-purple-100 text-purple-800',
-      'veterinarian': 'bg-green-100 text-green-800'
+      'registered': 'bg-blue-100 text-blue-800',
+      'admin': 'bg-green-100 text-green-800'
     };
     
     return (
       <span className={`px-2 py-1 text-xs rounded-full ${roleColors[userRole]}`}>
-        {userRole === 'veterinarian' ? 'Vet' : userRole}
+        {userRole}
       </span>
     );
   };
