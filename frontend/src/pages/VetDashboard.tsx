@@ -21,8 +21,8 @@ const VetDashboard = () => {
       </Helmet>
 
       <header className="space-y-2">
-        <h1 className="text-3xl font-bold">Clinic Dashboard</h1>
-        <p className="text-muted-foreground">Stay organized and deliver great care.</p>
+        <h1 className="font-brand text-3xl font-bold">Clinic Dashboard</h1>
+        <p className="font-brand text-muted-foreground">Stay organized and deliver great care.</p>
       </header>
 
       <Tabs defaultValue="appointments" className="space-y-6">

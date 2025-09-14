@@ -10,7 +10,7 @@ const PetRecords = () => {
     <div className="container mx-auto px-4 md:px-6 py-10 space-y-8">
       <Helmet>
         <title>Pet Profile & Health Records – HappyTails</title>
-        <meta name="description" content="View pet details, vaccination status, uploaded documents, and health reminders." />
+        <meta name="description" content="View pet details, vaccination status, and health reminders." />
         <link rel="canonical" href="/pet-records" />
       </Helmet>
 
@@ -19,7 +19,7 @@ const PetRecords = () => {
         <p className="text-muted-foreground">All your companion’s information—organized and accessible.</p>
       </header>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 max-w-4xl mx-auto">
         <Card className="md:col-span-1">
           <CardHeader>
             <CardTitle>Pet Details</CardTitle>
@@ -51,17 +51,6 @@ const PetRecords = () => {
             <div className="flex items-center justify-between"><span>Rabies</span><Badge variant="secondary">Up to date</Badge></div>
             <div className="flex items-center justify-between"><span>FVRCP</span><Badge variant="secondary">Up to date</Badge></div>
             <div className="flex items-center justify-between"><span>FeLV</span><Badge variant="secondary">Due in 2 months</Badge></div>
-          </CardContent>
-        </Card>
-
-        <Card className="md:col-span-1">
-          <CardHeader>
-            <CardTitle>Documents</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between"><span>Last vet visit.pdf</span><Button size="sm" variant="outline">View</Button></div>
-            <div className="flex items-center justify-between"><span>Vaccination record.pdf</span><Button size="sm" variant="outline">View</Button></div>
-            <div className="flex items-center justify-between"><span>Insurance policy.pdf</span><Button size="sm" variant="outline">View</Button></div>
           </CardContent>
         </Card>
       </div>

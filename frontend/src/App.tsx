@@ -22,6 +22,7 @@ import Resources from "./pages/Resources";
 import VetDashboard from "./pages/VetDashboard";
 import Login from "./pages/Login";
 import GetStarted from "./pages/GetStarted";
+import BookAppointment from "./pages/BookAppointment";
 
 // Inline SymptomChecker to avoid import issues
 interface Result {
@@ -319,6 +320,7 @@ const AppContent = () => {
         <Route path="/get-started" element={<GetStarted />} />
         <Route path="/symptom-checker" element={<SymptomChecker />} />
         <Route path="/vets" element={<ProtectedVets />} />
+        <Route path="/book-appointment" element={<BookAppointment />} />
         <Route path="/pet-records" element={<ProtectedPetRecords />} />
         <Route path="/resources" element={<Resources />} />
         <Route path="/vet-dashboard" element={<ProtectedVetDashboard />} />

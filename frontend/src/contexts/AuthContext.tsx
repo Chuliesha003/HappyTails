@@ -97,13 +97,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [guestUsageCount, setGuestUsageCount] = useState(0);
-  const maxGuestUsage = 3;
+  const maxGuestUsage = 2;
 
   // Initialize auth state from localStorage
   useEffect(() => {
     try {
       const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
-      const savedUsage = localStorage.getItem(STORAGE_KEYS.GUEST_USAGE);
+      const savedUsage = sessionStorage.getItem(STORAGE_KEYS.GUEST_USAGE);
       
       if (savedUser) {
         setUser(JSON.parse(savedUser));
@@ -157,7 +157,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Clear guest usage when user logs in
       setGuestUsageCount(0);
-      localStorage.removeItem(STORAGE_KEYS.GUEST_USAGE);
+      sessionStorage.removeItem(STORAGE_KEYS.GUEST_USAGE);
       
       return true;
     } catch (error) {
@@ -201,7 +201,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Clear guest usage when user registers
       setGuestUsageCount(0);
-      localStorage.removeItem(STORAGE_KEYS.GUEST_USAGE);
+      sessionStorage.removeItem(STORAGE_KEYS.GUEST_USAGE);
       
       return true;
     } catch (error) {
@@ -222,7 +222,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (user?.role === 'guest') {
       const newCount = guestUsageCount + 1;
       setGuestUsageCount(newCount);
-      localStorage.setItem(STORAGE_KEYS.GUEST_USAGE, newCount.toString());
+      sessionStorage.setItem(STORAGE_KEYS.GUEST_USAGE, newCount.toString());
     }
   };
 

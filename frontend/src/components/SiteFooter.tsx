@@ -27,16 +27,14 @@ const SiteFooter = () => {
           <h4 className="mb-3 font-semibold text-white">For Clinics</h4>
           <ul className="space-y-2 text-sm">
             <li><Link className="text-white/90 hover:text-white hover:underline" to="/vet-dashboard">Clinic Dashboard</Link></li>
-            <li><a className="text-white/90 hover:text-white hover:underline" href="#">Getting Started</a></li>
-            <li><a className="text-white/90 hover:text-white hover:underline" href="#">Pricing</a></li>
+            <li><Link className="text-white/90 hover:text-white hover:underline" to="/">Getting Started</Link></li>
           </ul>
         </div>
         <div>
           <h4 className="mb-3 font-semibold text-white">Contact</h4>
           <ul className="space-y-2 text-sm text-white/90">
             <li>Email: hello@happytails.app</li>
-            <li>Phone: (555) 123-TAIL</li>
-            <li>Mon–Fri: 9am–6pm</li>
+            <li>Website: HappyTails</li>
           </ul>
         </div>
       </div>

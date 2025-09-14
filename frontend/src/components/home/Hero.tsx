@@ -22,10 +22,10 @@ const Hero = () => {
 
       <div className="container mx-auto grid items-center gap-10 px-4 md:px-6 py-16 lg:py-20 md:grid-cols-2">
         <div className="space-y-6 animate-fade-in">
-          <h1 className="font-brand text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight text-foreground">
-            Caring for every tail, one health at a time
+          <h1 className="font-brand text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight text-foreground">
+            Caring for Every Tail
           </h1>
-          <p className="text-lg md:text-xl text-foreground/80 leading-relaxed max-w-lg">
+          <p className="font-brand text-lg md:text-xl text-foreground/80 leading-relaxed max-w-lg">
             Book trusted veterinarians, check symptoms with AI, and keep your pet's health records in one friendly place.
           </p>
 

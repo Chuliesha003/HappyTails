@@ -27,8 +27,8 @@ const Testimonials = () => {
     <section className="py-16 bg-card">
       <div className="container mx-auto px-4 md:px-6">
         <div className="mb-10 text-center">
-          <h2 className="text-3xl font-bold">Loved by pet owners and vets</h2>
-          <p className="mt-2 text-muted-foreground">Real stories from our caring community</p>
+          <h2 className="font-brand text-3xl font-bold">Loved by pet owners and vets</h2>
+          <p className="font-brand mt-2 text-muted-foreground">Real stories from our caring community</p>
         </div>
         <div className="grid gap-6 md:grid-cols-3">
           {testimonials.map((t, i) => (

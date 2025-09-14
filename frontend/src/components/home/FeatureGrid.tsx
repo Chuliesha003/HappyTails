@@ -35,8 +35,8 @@ const FeatureGrid = () => {
     <section className="py-16">
       <div className="container mx-auto px-4 md:px-6">
         <div className="mb-10 text-center">
-          <h2 className="text-3xl font-bold">Everything you need, in one place</h2>
-          <p className="mt-2 text-muted-foreground">Playful yet professional tools for pet parents and clinics.</p>
+          <h2 className="font-brand text-3xl font-bold">Everything you need, in one place</h2>
+          <p className="font-brand mt-2 text-muted-foreground">Playful yet professional tools for pet parents and clinics.</p>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((f) => (

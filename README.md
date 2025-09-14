@@ -5,7 +5,7 @@ A comprehensive pet health management platform with AI-powered symptom checking,
 ## ✨ Features
 
 ### 🔐 Email-Based Role System
-- **Guest Users**: Limited access with 3 free symptom checks
+- **Guest Users**: Limited access with 2 free symptom checks
 - **Basic Users**: Essential features including unlimited symptom checker
 - **Premium Users**: Access to most features including pet records
 - **Veterinarians**: Full access including professional dashboard
