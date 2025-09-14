@@ -4,17 +4,17 @@ A comprehensive pet health management platform with AI-powered symptom checking,
 
 ## ✨ Features
 
-### 🔐 Email-Based Role System
+### 🔐 Simple User System
 - **Guest Users**: Limited access with 2 free symptom checks
-- **Basic Users**: Essential features including unlimited symptom checker
-- **Premium Users**: Access to most features including pet records
-- **Veterinarians**: Full access including professional dashboard
+- **Registered Users**: Full access to all pet health management features
+- **Admin Users**: Complete platform administration and management
 
 ### 🏥 Core Functionality
 - **AI Symptom Checker**: Analyze pet symptoms with detailed recommendations
 - **Vet Finder**: Locate and connect with trusted veterinarians
-- **Pet Records**: Manage your pet's health information (Premium+)
-- **Vet Dashboard**: Professional tools for veterinarians
+- **Pet Records**: Manage your pet's health information
+- **User Dashboard**: Personal pet health management center
+- **Admin Dashboard**: Platform administration and user management
 - **Resources**: Educational content for pet care
 - **Responsive Design**: Works seamlessly on all devices
 
@@ -26,16 +26,13 @@ A comprehensive pet health management platform with AI-powered symptom checking,
 
 ## 🚀 Demo Accounts
 
-Try different access levels with these email addresses:
+Try different access levels with these credentials:
 
-| Email | Role | Features |
-|-------|------|----------|
-| `vet@happytails.com` | Veterinarian | 🟢 Full access to all features |
-| `premium@test.com` | Premium | 🟡 Most features + Pet Records |
-| `user@test.com` | Basic | 🔵 Essential features |
-| `any.email@example.com` | Basic | 🔵 Default access level |
-
-*Password: Any password works for demo purposes*
+| Email | Password | Role | Features |
+|-------|----------|------|----------|
+| `demo.admin@happytails.com` | `demo123` | Admin | 🟢 Full platform management |
+| `demo.user@happytails.com` | `demo123` | User | 🔵 Complete pet health features |
+| No login required | - | Guest | ⚪ Limited access (2 symptom checks) |
 
 ## 🛠️ Tech Stack
 
