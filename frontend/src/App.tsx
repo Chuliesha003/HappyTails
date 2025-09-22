@@ -15,6 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { GuestLimitBanner } from "@/components/GuestLimitBanner";
 import Index from "./pages/Index";
+import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import Vets from "./pages/Vets";
 import PetRecords from "./pages/PetRecords";
@@ -318,6 +319,7 @@ const AppContent = () => {
       <SiteHeader />
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/about" element={<About />} />
         <Route path="/login" element={<Login />} />
         <Route path="/get-started" element={<GetStarted />} />
         <Route path="/symptom-checker" element={<SymptomChecker />} />

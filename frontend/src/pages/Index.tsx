@@ -1,7 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import Hero from "@/components/home/Hero";
 import FeatureGrid from "@/components/home/FeatureGrid";
-import About from "@/components/home/About";
 import Testimonials from "@/components/home/Testimonials";
 
 const Index = () => {
@@ -13,7 +12,6 @@ const Index = () => {
         <link rel="canonical" href="/" />
       </Helmet>
       <Hero />
-      <About />
       <FeatureGrid />
       <Testimonials />
     </main>

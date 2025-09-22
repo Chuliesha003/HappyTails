@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
+  { to: "/about", label: "About", icon: PawPrint },
   { to: "/symptom-checker", label: "Symptom Checker", icon: Stethoscope },
   { to: "/vets", label: "Find a Vet", icon: CalendarDays },
   { to: "/pet-records", label: "Pet Records", icon: FileText },
@@ -27,8 +28,8 @@ const SiteHeader = () => {
   // Filter navigation items based on user permissions
   const getVisibleNavItems = () => {
     const visibleNavItems = navItems.filter(item => {
-      // Always show symptom checker and resources
-      if (item.to === "/symptom-checker" || item.to === "/resources") {
+      // Always show about, symptom checker and resources
+      if (item.to === "/about" || item.to === "/symptom-checker" || item.to === "/resources") {
         return true;
       }
       
