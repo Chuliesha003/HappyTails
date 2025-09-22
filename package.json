@@ -1,0 +1,21 @@
+{
+  "name": "happytails-monorepo",
+  "version": "1.0.0",
+  "description": "HappyTails Pet Health Management Platform",
+  "private": true,
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "preview": "cd frontend && npm run preview",
+    "lint": "cd frontend && npm run lint",
+    "frontend:install": "cd frontend && npm install",
+    "frontend:dev": "cd frontend && npm run dev",
+    "frontend:build": "cd frontend && npm run build"
+  },
+  "workspaces": [
+    "frontend"
+  ],
+  "keywords": ["pet-health", "veterinary", "react", "typescript"],
+  "author": "HappyTails Team",
+  "license": "MIT"
+}
