@@ -14,7 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { GuestLimitBanner } from "@/components/GuestLimitBanner";
-import Index from "./pages/Index";
 import About from "@/components/home/About";
 import NotFound from "./pages/NotFound";
 import Vets from "./pages/Vets";
@@ -326,10 +325,10 @@ const AppContent = () => {
         <Route path="/book-appointment" element={<BookAppointment />} />
         <Route path="/pet-records" element={<ProtectedPetRecords />} />
         <Route path="/resources" element={<Resources />} />
-        <Route path="/admin-dashboard" element={<ProtectedAdminDashboard />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/user-dashboard" element={<ProtectedUserDashboard />} />
-        <Route path="*" element={<NotFound />} />
+  <Route path="/admin-dashboard" element={<ProtectedAdminDashboard />} />
+  <Route path="/about" element={<About />} />
+  <Route path="/user-dashboard" element={<ProtectedUserDashboard />} />
+  <Route path="*" element={<NotFound />} />
       </Routes>
       {!hideFooter && <SiteFooter />}
     </>
