@@ -8,13 +8,9 @@ const articles = {
     { title: "Balanced Diets for Puppies & Kittens", type: "Article" },
     { title: "Hydration & Summer Heat Tips", type: "Video" },
   ],
-  training: [
-    { title: "Gentle Crate Training Basics", type: "Article" },
-    { title: "Clicker Training 101", type: "Video" },
-  ],
   diseases: [
     { title: "Recognizing Parvovirus Early", type: "Article" },
-    { title: "Diabetes in Cats – Owner’s Guide", type: "Article" },
+    { title: "Diabetes in Cats – Owner's Guide", type: "Article" },
   ],
 };
 
@@ -39,7 +35,7 @@ const Resources = () => {
     <div className="container mx-auto px-4 md:px-6 py-10 space-y-8">
       <Helmet>
         <title>Learning Resources – HappyTails</title>
-        <meta name="description" content="Browse articles and videos on nutrition, training, and common diseases for pets." />
+        <meta name="description" content="Browse articles and videos on nutrition and common diseases for pets." />
         <link rel="canonical" href="/resources" />
       </Helmet>
 
@@ -51,14 +47,10 @@ const Resources = () => {
       <Tabs defaultValue="nutrition" className="space-y-6">
         <TabsList>
           <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
-          <TabsTrigger value="training">Training</TabsTrigger>
           <TabsTrigger value="diseases">Diseases</TabsTrigger>
         </TabsList>
         <TabsContent value="nutrition">
           <ResourceList items={articles.nutrition} />
-        </TabsContent>
-        <TabsContent value="training">
-          <ResourceList items={articles.training} />
         </TabsContent>
         <TabsContent value="diseases">
           <ResourceList items={articles.diseases} />
