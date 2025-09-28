@@ -1,158 +1,186 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Users, Shield, Award, Target, Zap } from "lucide-react";
+import { Heart, Users, Shield, Award, Target, Zap, Star, PawPrint, Bone, Sparkles } from "lucide-react";
 
 const About: React.FC = () => (
-  <section className="py-16 px-4 max-w-6xl mx-auto">
-    {/* Hero Section */}
-    <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-3xl shadow-xl p-10 md:p-16 flex flex-col items-center mb-16 border border-purple-100">
-      <div className="flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 shadow-lg mb-8">
-        <span className="text-6xl">🐾</span>
-      </div>
-      <h2 className="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-6 tracking-tight">
-        About HappyTails
-      </h2>
-      <p className="text-xl text-gray-700 mb-6 max-w-3xl mx-auto leading-relaxed text-center">
-        HappyTails is a comprehensive digital platform revolutionizing pet healthcare through innovative technology and compassionate care. We bridge the gap between pet owners and veterinary professionals, ensuring every pet receives the attention they deserve.
-      </p>
-      <div className="flex flex-wrap gap-4 justify-center">
-        <Badge variant="secondary" className="px-4 py-2 text-sm font-medium">
-          Trusted by 10,000+ Pet Owners
-        </Badge>
-        <Badge variant="secondary" className="px-4 py-2 text-sm font-medium">
-          500+ Partner Veterinarians
-        </Badge>
-        <Badge variant="secondary" className="px-4 py-2 text-sm font-medium">
-          Available 24/7
-        </Badge>
-      </div>
-    </div>
+  <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-pink-50">
+    <section className="py-20 px-4 max-w-7xl mx-auto">
+      {/* Hero Section with Floating Elements */}
+      <div className="relative mb-20">
+        {/* Floating decorative elements */}
+        <div className="absolute -top-10 -left-10 w-20 h-20 bg-yellow-200 rounded-full opacity-20 animate-bounce"></div>
+        <div className="absolute top-20 -right-5 w-16 h-16 bg-pink-200 rounded-full opacity-30 animate-pulse"></div>
+        <div className="absolute bottom-10 left-1/4 w-12 h-12 bg-orange-200 rounded-full opacity-25 animate-bounce" style={{animationDelay: '1s'}}></div>
 
-    {/* Mission & Vision */}
-    <div className="grid md:grid-cols-2 gap-8 mb-16">
-      <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-3 text-2xl text-blue-600">
-            <Target className="h-8 w-8" />
-            Our Mission
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-700 text-lg leading-relaxed">
-            To democratize access to quality veterinary care by providing a seamless, technology-driven platform that connects pet owners with certified veterinarians, delivers accurate health information, and fosters a supportive community dedicated to pet wellness.
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-3 text-purple-600">
-            <Heart className="h-8 w-8" />
-            Our Vision
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-700 text-lg leading-relaxed">
-            A world where every pet receives timely, compassionate care regardless of location or circumstance. We envision a future where technology enhances, rather than replaces, the human-animal bond through informed, proactive pet healthcare.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-
-    {/* Core Values */}
-    <div className="mb-16">
-      <h3 className="text-3xl font-bold text-center mb-12 text-gray-800">Our Core Values</h3>
-      <div className="grid md:grid-cols-3 gap-8">
-        <Card className="text-center border-0 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1">
-          <CardHeader>
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center mb-4">
-              <Shield className="h-8 w-8 text-white" />
-            </div>
-            <CardTitle className="text-xl text-green-600">Trust & Safety</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600">
-              We prioritize the safety and well-being of pets above all else, working only with verified, licensed veterinary professionals.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="text-center border-0 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1">
-          <CardHeader>
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center mb-4">
-              <Users className="h-8 w-8 text-white" />
-            </div>
-            <CardTitle className="text-xl text-purple-600">Community</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600">
-              Building a supportive network of pet owners, veterinarians, and animal welfare advocates working together for better pet care.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="text-center border-0 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1">
-          <CardHeader>
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center mb-4">
-              <Zap className="h-8 w-8 text-white" />
-            </div>
-            <CardTitle className="text-xl text-orange-600">Innovation</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600">
-              Leveraging cutting-edge technology to make veterinary care more accessible, efficient, and personalized for every pet owner.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-
-    {/* What Sets Us Apart */}
-    <Card className="border-0 shadow-xl bg-gradient-to-r from-blue-50 to-purple-50">
-      <CardHeader className="text-center pb-8">
-        <CardTitle className="text-3xl text-gray-800 mb-4">What Sets HappyTails Apart</CardTitle>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          We're not just another pet care app – we're your comprehensive partner in pet wellness
-        </p>
-      </CardHeader>
-      <CardContent>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="text-center">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <Award className="h-6 w-6 text-blue-600" />
-            </div>
-            <h4 className="font-semibold text-gray-800 mb-2">Expert Network</h4>
-            <p className="text-sm text-gray-600">Access to board-certified veterinarians across multiple specialties</p>
+        <div className="text-center relative z-10">
+          <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 shadow-2xl mb-8 transform hover:scale-105 transition-transform">
+            <PawPrint className="w-16 h-16 text-white" />
           </div>
 
-          <div className="text-center">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <Shield className="h-6 w-6 text-purple-600" />
-            </div>
-            <h4 className="font-semibold text-gray-800 mb-2">Verified Professionals</h4>
-            <p className="text-sm text-gray-600">All veterinarians undergo rigorous background and credential checks</p>
+          <h1 className="text-6xl md:text-7xl font-black bg-gradient-to-r from-orange-600 via-pink-600 to-purple-600 bg-clip-text text-transparent mb-6 leading-tight">
+            HappyTails
+          </h1>
+
+          <div className="max-w-4xl mx-auto mb-8">
+            <p className="text-2xl text-gray-700 mb-4 font-light leading-relaxed">
+              Where <span className="font-bold text-orange-600">paw-sitive</span> care meets
+              <span className="font-bold text-pink-600"> cutting-edge</span> technology
+            </p>
+            <p className="text-lg text-gray-600 leading-relaxed">
+              We're not just building an app – we're creating a movement. A world where every wag of a tail and purr of contentment is celebrated, supported, and protected.
+            </p>
           </div>
 
-          <div className="text-center">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <Heart className="h-6 w-6 text-green-600" />
+          <div className="flex flex-wrap justify-center gap-6 mb-12">
+            <div className="bg-white/80 backdrop-blur-sm rounded-full px-6 py-3 shadow-lg border border-orange-200">
+              <div className="flex items-center gap-2">
+                <Heart className="w-5 h-5 text-red-500" />
+                <span className="font-semibold text-gray-800">10,000+ Happy Pets</span>
+              </div>
             </div>
-            <h4 className="font-semibold text-gray-800 mb-2">Compassionate Care</h4>
-            <p className="text-sm text-gray-600">Every interaction guided by genuine concern for pet welfare</p>
-          </div>
-
-          <div className="text-center">
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <Zap className="h-6 w-6 text-orange-600" />
+            <div className="bg-white/80 backdrop-blur-sm rounded-full px-6 py-3 shadow-lg border border-pink-200">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-purple-500" />
+                <span className="font-semibold text-gray-800">500+ Vet Partners</span>
+              </div>
             </div>
-            <h4 className="font-semibold text-gray-800 mb-2">24/7 Support</h4>
-            <p className="text-sm text-gray-600">Round-the-clock access to emergency resources and advice</p>
+            <div className="bg-white/80 backdrop-blur-sm rounded-full px-6 py-3 shadow-lg border border-yellow-200">
+              <div className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500" />
+                <span className="font-semibold text-gray-800">24/7 Care Support</span>
+              </div>
+            </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
-  </section>
+      </div>
+
+      {/* Story Section */}
+      <div className="mb-20">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <h2 className="text-4xl font-bold text-gray-800 leading-tight">
+              Born from a <span className="text-orange-600">Simple Idea</span>
+            </h2>
+            <p className="text-lg text-gray-600 leading-relaxed">
+              It started with a single question: "Why should finding a vet feel like solving a puzzle?" We saw pet parents struggling to connect with quality care, drowning in confusing information, and making rushed decisions about their furry family members.
+            </p>
+            <p className="text-lg text-gray-600 leading-relaxed">
+              So we built HappyTails – not just another app, but a trusted companion in your pet parenting journey. We're here to make every "tail" wag with joy and every purr resonate with health.
+            </p>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-pink-500 rounded-full flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800">Founded with Heart</p>
+                <p className="text-sm text-gray-600">Every feature designed by pet lovers, for pet lovers</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="bg-gradient-to-br from-orange-100 to-pink-100 rounded-3xl p-8 shadow-2xl transform rotate-2 hover:rotate-0 transition-transform">
+              <div className="bg-white rounded-2xl p-6 shadow-lg">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
+                    <Bone className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-800">Our Promise</h3>
+                    <p className="text-sm text-gray-600">Quality care, accessible to all</p>
+                  </div>
+                </div>
+                <p className="text-gray-700 leading-relaxed">
+                  "We believe every pet deserves the same level of care and attention we'd give our own. HappyTails is our way of making that belief a reality for pet parents everywhere."
+                </p>
+                <div className="mt-4 flex items-center gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  ))}
+                  <span className="ml-2 text-sm text-gray-600">Trusted by thousands</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mission & Values in a Fun Layout */}
+      <div className="mb-20">
+        <h2 className="text-4xl font-bold text-center text-gray-800 mb-16">
+          What Makes Us <span className="text-pink-600">Purr-fect</span>
+        </h2>
+
+        <div className="grid md:grid-cols-3 gap-8">
+          <Card className="group hover:shadow-2xl transition-all duration-300 border-0 bg-gradient-to-br from-orange-50 to-orange-100 hover:-translate-y-2">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto w-20 h-20 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                <Target className="h-10 w-10 text-white" />
+              </div>
+              <CardTitle className="text-2xl text-orange-600 mb-2">Our Mission</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              <p className="text-gray-700 leading-relaxed">
+                To create a world where finding quality veterinary care is as easy as teaching your dog to fetch. We're bridging the gap between pet parents and expert care, one happy tail at a time.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:shadow-2xl transition-all duration-300 border-0 bg-gradient-to-br from-pink-50 to-pink-100 hover:-translate-y-2">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto w-20 h-20 bg-gradient-to-br from-pink-400 to-purple-500 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                <Heart className="h-10 w-10 text-white" />
+              </div>
+              <CardTitle className="text-2xl text-pink-600 mb-2">Our Heart</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              <p className="text-gray-700 leading-relaxed">
+                Every line of code, every feature, every partnership – all driven by our unwavering love for animals. We're not just developers; we're fellow pet parents on a mission.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:shadow-2xl transition-all duration-300 border-0 bg-gradient-to-br from-purple-50 to-purple-100 hover:-translate-y-2">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto w-20 h-20 bg-gradient-to-br from-purple-400 to-blue-500 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                <Zap className="h-10 w-10 text-white" />
+              </div>
+              <CardTitle className="text-2xl text-purple-600 mb-2">Our Spark</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              <p className="text-gray-700 leading-relaxed">
+                Innovation meets compassion. We're constantly evolving, adding new features, and pushing boundaries to make pet care better, faster, and more accessible than ever before.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Fun Stats Section */}
+      <div className="bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 rounded-3xl p-12 text-white text-center shadow-2xl">
+        <h2 className="text-4xl font-bold mb-8">Join Our Growing Family</h2>
+        <div className="grid md:grid-cols-4 gap-8">
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+            <div className="text-4xl font-bold mb-2">10K+</div>
+            <div className="text-lg opacity-90">Happy Pets</div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+            <div className="text-4xl font-bold mb-2">500+</div>
+            <div className="text-lg opacity-90">Vet Partners</div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+            <div className="text-4xl font-bold mb-2">24/7</div>
+            <div className="text-lg opacity-90">Support</div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+            <div className="text-4xl font-bold mb-2">4.9★</div>
+            <div className="text-lg opacity-90">User Rating</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
 );
 
 export default About;
