@@ -5,8 +5,8 @@ const About = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <Helmet>
-        <title>About Us – HappyTails</title>
-        <meta name="description" content="Learn about HappyTails' mission to provide the best care and resources for your beloved pets. Our vision and values guide everything we do." />
+        <title>About HappyTails - Revolutionizing Pet Healthcare</title>
+        <meta name="description" content="Discover HappyTails' mission to transform pet healthcare through technology. Learn about our commitment to connecting pet owners with trusted veterinarians and providing comprehensive pet wellness resources." />
         <link rel="canonical" href="/about" />
       </Helmet>
       
