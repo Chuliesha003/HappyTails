@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
-  { to: "/about", label: "About", icon: PawPrint },
+  { to: "/about", label: "About", icon: BookOpen },
   { to: "/symptom-checker", label: "Symptom Checker", icon: Stethoscope },
   { to: "/vets", label: "Find a Vet", icon: CalendarDays },
   { to: "/pet-records", label: "Pet Records", icon: FileText },
@@ -32,28 +32,34 @@ const SiteHeader = () => {
       if (item.to === "/about" || item.to === "/symptom-checker" || item.to === "/resources") {
         return true;
       }
-      
       // Check feature access for other items
       const featureMap: Record<string, string> = {
         "/vets": "vet-finder",
         "/pet-records": "pet-records"
       };
-      
       const requiredFeature = featureMap[item.to];
       return requiredFeature ? canAccessFeature(requiredFeature) : false;
     });
 
-    // Add dashboard items at the beginning if user is logged in
+    // Compute dashboard links based on role
+    let dashboards = [];
     if (isRegistered()) {
-      const userDashboards = dashboardItems.filter(item => {
+      dashboards = dashboardItems.filter(item => {
         if (item.role === "admin" && isAdmin()) return true;
         if (item.role === "registered" && !isAdmin() && isRegistered()) return true;
         return false;
       });
-      return [...userDashboards, ...visibleNavItems];
+    } else {
+      dashboards = [];
     }
-
-    return visibleNavItems;
+    // Ensure About appears immediately after Home/brand by placing it first
+    const aboutItem = visibleNavItems.find(item => item.to === "/about");
+    const restItems = visibleNavItems.filter(item => item.to !== "/about");
+    return [
+      ...(aboutItem ? [aboutItem] : []),
+      ...dashboards,
+      ...restItems,
+    ];
   };
 
   const getRoleBadge = () => {

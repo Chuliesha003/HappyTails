@@ -26,6 +26,15 @@ interface Vet {
   types?: string[];
 }
 
+interface OverpassElement {
+  type?: string;
+  id?: number;
+  lat?: number;
+  lon?: number;
+  center?: { lat: number; lon: number };
+  tags?: Record<string, string>;
+}
+
 const Rating = ({ value }: { value: number }) => (
   <div className="flex items-center gap-1 text-yellow-500" aria-label={`Rating ${value} out of 5`}>
     {Array.from({ length: 5 }).map((_, i) => (
@@ -75,9 +84,9 @@ const fetchNearbyClinics = async (lat: number, lng: number, radius: number = 100
     const data = await response.json();
     
     const clinics: Vet[] = data.elements
-      .filter((element: any) => element.tags && element.tags.name)
+      .filter((element: OverpassElement) => element.tags && element.tags.name)
       .slice(0, 10)
-      .map((element: any, index: number) => {
+      .map((element: OverpassElement, index: number) => {
         const clinicLat = element.lat || element.center?.lat || lat;
         const clinicLng = element.lon || element.center?.lon || lng;
         const distance = calculateDistance(lat, lng, clinicLat, clinicLng);
@@ -477,7 +486,7 @@ const Vets = () => {
                       </Button>
                       <Button 
                         size="sm"
-                        onClick={onBook}
+                        onClick={() => onBook(selected.id, selected.name)}
                         className="bg-purple-600 hover:bg-purple-700"
                       >
                         Book Appointment

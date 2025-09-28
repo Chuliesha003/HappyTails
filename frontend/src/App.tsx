@@ -1,4 +1,4 @@
-import React, { Component, useState } from 'react';
+import React, { Component, useState, ErrorInfo } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,6 +25,8 @@ import UserDashboard from "./pages/UserDashboard";
 import Login from "./pages/Login";
 import GetStarted from "./pages/GetStarted";
 import BookAppointment from "./pages/BookAppointment";
+import SiteHeader from "./components/SiteHeader";
+import SiteFooter from "./components/SiteFooter";
 
 // Inline SymptomChecker to avoid import issues
 interface Result {
@@ -297,8 +299,6 @@ const SymptomChecker = () => {
     </div>
   );
 };
-import SiteHeader from "./components/SiteHeader";
-import SiteFooter from "./components/SiteFooter";
 import { AuthProvider } from "./contexts/AuthContext";
 import { withAuth } from "./components/withAuth";
 
@@ -337,15 +337,14 @@ const AppContent = () => {
 };
 
 // Error boundary to show runtime errors instead of a white screen
-class ErrorBoundary extends Component<{ children?: React.ReactNode }, { error: Error | null; info: any | null }>{
-  constructor(props: any) {
+class ErrorBoundary extends Component<{ children?: React.ReactNode }, { error: Error | null; info: ErrorInfo | null }>{
+  constructor(props: { children?: React.ReactNode }) {
     super(props);
     this.state = { error: null, info: null };
   }
 
-  componentDidCatch(error: Error, info: any) {
+  componentDidCatch(error: Error, info: ErrorInfo) {
     // Log to console and store for display
-    // eslint-disable-next-line no-console
     console.error('Uncaught error in App:', error, info);
     this.setState({ error, info });
   }

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Edit, Plus } from "lucide-react";
 
 interface PetData {
@@ -49,25 +49,32 @@ const PetRecords = () => {
     allergies: ""
   });
 
-  // Load pets from localStorage on component mount
+  // Load pets from localStorage on mount
   useEffect(() => {
-    const savedPets = localStorage.getItem('petRecords');
-    if (savedPets) {
+    const saved = localStorage.getItem('petRecords');
+    if (saved) {
       try {
-        const parsedPets = JSON.parse(savedPets);
-        setPets(parsedPets);
-      } catch (error) {
-        console.error('Error loading pets from localStorage:', error);
+        const parsed: PetData[] = JSON.parse(saved);
+        if (Array.isArray(parsed)) setPets(parsed);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to parse petRecords from localStorage', e);
       }
     }
   }, []);
 
-  // Save pets to localStorage whenever pets array changes
+  // Persist pets to localStorage
   useEffect(() => {
-    if (pets.length > 0) {
-      localStorage.setItem('petRecords', JSON.stringify(pets));
-    }
+    if (pets.length) localStorage.setItem('petRecords', JSON.stringify(pets));
+    else localStorage.removeItem('petRecords');
   }, [pets]);
+
+  const handleInputChange = (field: keyof FormData, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
   const resetForm = () => {
     setFormData({
@@ -84,33 +91,23 @@ const PetRecords = () => {
     setEditingPetId(null);
   };
 
-  const handleInputChange = (field: keyof FormData, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.name && formData.breed && formData.age && formData.weight && formData.gender) {
-      if (editingPetId) {
-        // Update existing pet
-        setPets(prev => prev.map(pet => 
-          pet.id === editingPetId 
-            ? { ...formData, id: editingPetId }
-            : pet
-        ));
-      } else {
-        // Add new pet
-        const newPet: PetData = {
-          ...formData,
-          id: Date.now().toString()
-        };
-        setPets(prev => [...prev, newPet]);
-      }
-      resetForm();
+    const requiredOk = !!(formData.name && formData.breed && formData.age && formData.weight && formData.gender);
+    if (!requiredOk) return;
+
+    if (editingPetId) {
+      setPets(prev => 
+        prev.map(p => p.id === editingPetId ? { ...formData, id: editingPetId } as PetData : p)
+      );
+    } else {
+      const newPet: PetData = {
+        ...formData,
+        id: Date.now().toString()
+      };
+      setPets(prev => [...prev, newPet]);
     }
+    resetForm();
   };
 
   const handleEditPet = (pet: PetData) => {
@@ -128,9 +125,7 @@ const PetRecords = () => {
     setEditingPetId(pet.id);
   };
 
-  const handleCancelEdit = () => {
-    resetForm();
-  };
+  const handleCancelEdit = () => resetForm();
 
   return (
     <div className="container mx-auto px-4 md:px-6 py-10 space-y-8">
