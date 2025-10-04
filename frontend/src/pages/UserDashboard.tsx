@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Heart, 
   Calendar, 
@@ -18,66 +19,83 @@ import {
   Weight,
   Shield,
   Syringe,
-  Activity
+  Activity,
+  Loader2
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { petsService } from "@/services/pets";
+import { appointmentsService } from "@/services/appointments";
+import { toast } from "@/hooks/use-toast";
+import type { Pet, Appointment } from "@/types/api";
 
 const UserDashboard = () => {
-  const pets = [
-    {
-      id: 1,
-      name: "Buddy",
-      type: "Dog",
-      breed: "Golden Retriever",
-      age: "3 years",
-      weight: "32 kg",
-      lastVisit: "2024-01-10",
-      nextVaccination: "2024-04-15",
-      healthStatus: "Excellent",
-      microchipId: "982000123456789",
-      vetName: "Dr. Sarah Johnson"
-    },
-    {
-      id: 2,
-      name: "Luna",
-      type: "Cat",
-      breed: "Persian",
-      age: "2 years",
-      weight: "4.2 kg",
-      lastVisit: "2023-12-20",
-      nextVaccination: "2024-02-20",
-      healthStatus: "Good",
-      microchipId: "982000987654321",
-      vetName: "Dr. Mark Chen"
-    }
-  ];
+  const [pets, setPets] = useState<Pet[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [isLoadingPets, setIsLoadingPets] = useState(true);
+  const [isLoadingAppointments, setIsLoadingAppointments] = useState(true);
 
-  const upcomingAppointments = [
-    {
-      id: 1,
-      petName: "Buddy",
-      type: "Annual Checkup",
-      date: "2024-01-20",
-      time: "10:30 AM",
-      vet: "Dr. Sarah Johnson",
-      clinic: "Downtown Vet Clinic",
-      status: "Confirmed"
-    },
-    {
-      id: 2,
-      petName: "Luna",
-      type: "Vaccination",
-      date: "2024-02-05",
-      time: "2:15 PM",
-      vet: "Dr. Mark Chen",
-      clinic: "PetCare Plus",
-      status: "Pending"
+  useEffect(() => {
+    loadPets();
+    loadAppointments();
+  }, []);
+
+  const loadPets = async () => {
+    try {
+      setIsLoadingPets(true);
+      const data = await petsService.getAllPets();
+      setPets(data);
+    } catch (error) {
+      console.error('Failed to load pets:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load pets. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingPets(false);
     }
-  ];
+  };
+
+  const loadAppointments = async () => {
+    try {
+      setIsLoadingAppointments(true);
+      const data = await appointmentsService.getUpcomingAppointments();
+      setAppointments(data);
+    } catch (error) {
+      console.error('Failed to load appointments:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load appointments. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingAppointments(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+        return 'bg-green-100 text-green-700';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'cancelled':
+        return 'bg-red-100 text-red-700';
+      case 'completed':
+        return 'bg-blue-100 text-blue-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
 
   const recentActivity = [
-    { action: "Buddy's vaccination completed", date: "3 days ago" },
-    { action: "Luna's weight recorded: 4.2 kg", date: "1 week ago" },
+    { action: "Dashboard loaded", date: "Just now" },
     { action: "Appointment booked for Buddy", date: "2 weeks ago" },
     { action: "Health profile updated for Luna", date: "3 weeks ago" }
   ];
@@ -131,55 +149,81 @@ const UserDashboard = () => {
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4">
-                {pets.map((pet) => (
-                  <div key={pet.id} className="p-4 border rounded-lg space-y-3">
-                    <div className="flex items-center space-x-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarFallback className="bg-pink-100 text-pink-600">
-                          {pet.name[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">{pet.name}</h3>
-                        <p className="text-sm text-muted-foreground">{pet.breed} • {pet.age}</p>
+                {isLoadingPets ? (
+                  <div className="space-y-4">
+                    {[1, 2].map(i => (
+                      <div key={i} className="p-4 border rounded-lg space-y-3">
+                        <div className="flex items-center space-x-4">
+                          <Skeleton className="h-12 w-12 rounded-full" />
+                          <div className="flex-1 space-y-2">
+                            <Skeleton className="h-5 w-24" />
+                            <Skeleton className="h-4 w-32" />
+                          </div>
+                        </div>
+                        <Skeleton className="h-20 w-full" />
                       </div>
-                      <Badge 
-                        variant={pet.healthStatus === 'Excellent' ? 'default' : 'secondary'}
-                        className={pet.healthStatus === 'Excellent' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
-                      >
-                        {pet.healthStatus}
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Weight className="h-4 w-4 text-gray-500" />
-                        <span>{pet.weight}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-4 w-4 text-gray-500" />
-                        <span>{pet.microchipId}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Stethoscope className="h-4 w-4 text-gray-500" />
-                        <span>{pet.vetName}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Syringe className="h-4 w-4 text-gray-500" />
-                        <span>Next: {pet.nextVaccination}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1" asChild>
-                        <Link to="/pet-records">View Full Profile</Link>
-                      </Button>
-                      <Button size="sm" className="flex-1" asChild>
-                        <Link to="/book-appointment">Book Appointment</Link>
-                      </Button>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                ) : pets.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Heart className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No pets added yet</p>
+                    <Button size="sm" className="mt-4" asChild>
+                      <Link to="/pet-records">Add Your First Pet</Link>
+                    </Button>
+                  </div>
+                ) : (
+                  pets.map((pet) => (
+                    <div key={pet.id} className="p-4 border rounded-lg space-y-3">
+                      <div className="flex items-center space-x-4">
+                        <Avatar className="h-12 w-12">
+                          <AvatarFallback className="bg-pink-100 text-pink-600">
+                            {pet.name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <h3 className="font-semibold">{pet.name}</h3>
+                          <p className="text-sm text-muted-foreground">{pet.breed} • {pet.age} years old</p>
+                        </div>
+                        <Badge className="bg-green-100 text-green-800">
+                          {pet.species}
+                        </Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Weight className="h-4 w-4 text-gray-500" />
+                          <span>{pet.weight} lbs</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Activity className="h-4 w-4 text-gray-500" />
+                          <span className="capitalize">{pet.gender}</span>
+                        </div>
+                        {pet.color && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-500">🎨</span>
+                            <span>{pet.color}</span>
+                          </div>
+                        )}
+                        {pet.medicalHistory && (
+                          <div className="flex items-center gap-2 col-span-2">
+                            <FileText className="h-4 w-4 text-gray-500" />
+                            <span className="text-xs">{pet.medicalHistory}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" className="flex-1" asChild>
+                          <Link to="/pet-records">View Full Profile</Link>
+                        </Button>
+                        <Button size="sm" className="flex-1" asChild>
+                          <Link to="/vets">Book Appointment</Link>
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
 
@@ -191,37 +235,63 @@ const UserDashboard = () => {
                   Upcoming Appointments
                 </CardTitle>
                 <Button size="sm" asChild>
-                  <Link to="/book-appointment">
+                  <Link to="/vets">
                     <PlusCircle className="h-4 w-4 mr-2" />
                     Book New
                   </Link>
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4">
-                {upcomingAppointments.map((appointment) => (
-                  <div key={appointment.id} className="p-4 border rounded-lg space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold">{appointment.petName}</h3>
-                      <Badge variant={appointment.status === 'Confirmed' ? 'default' : 'secondary'}>
-                        {appointment.status}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        <span>{appointment.date} at {appointment.time}</span>
+                {isLoadingAppointments ? (
+                  <div className="space-y-4">
+                    {[1, 2].map(i => (
+                      <div key={i} className="p-4 border rounded-lg space-y-2">
+                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Stethoscope className="h-4 w-4" />
-                        <span>{appointment.vet}</span>
-                      </div>
-                      <div className="flex items-center gap-2 col-span-2">
-                        <MapPin className="h-4 w-4" />
-                        <span>{appointment.clinic} - {appointment.type}</span>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                ) : appointments.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No upcoming appointments</p>
+                    <Button size="sm" className="mt-4" asChild>
+                      <Link to="/vets">Book Your First Appointment</Link>
+                    </Button>
+                  </div>
+                ) : (
+                  appointments.map((appointment) => (
+                    <div key={appointment.id} className="p-4 border rounded-lg space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold">{appointment.petId}</h3>
+                        <Badge className={getStatusColor(appointment.status)}>
+                          {appointment.status}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          <span>{formatDate(appointment.date)} at {appointment.time}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Stethoscope className="h-4 w-4" />
+                          <span>Dr. {appointment.vetId}</span>
+                        </div>
+                        <div className="flex items-center gap-2 col-span-2">
+                          <FileText className="h-4 w-4" />
+                          <span>{appointment.reason}</span>
+                        </div>
+                        {appointment.notes && (
+                          <div className="flex items-center gap-2 col-span-2 text-xs">
+                            <span className="font-medium">Notes:</span>
+                            <span>{appointment.notes}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
 
