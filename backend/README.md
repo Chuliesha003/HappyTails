@@ -81,7 +81,36 @@ GEMINI_API_KEY=your_gemini_api_key
 
 # JWT
 JWT_SECRET=your_jwt_secret
+JWT_EXPIRE=7d
+
+# CORS Configuration
+# Comma-separated list of allowed frontend origins
+ALLOWED_ORIGINS=http://localhost:8080,http://localhost:3000,http://localhost:5173
+# For production, add your production domain:
+# ALLOWED_ORIGINS=https://yourdomain.com,http://localhost:8080
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
 ```
+
+### CORS Configuration
+
+The backend supports CORS (Cross-Origin Resource Sharing) to allow requests from the frontend application. By default, the following origins are allowed:
+- `http://localhost:8080` (Vite default dev server)
+- `http://localhost:3000` (Create React App default)
+- `http://localhost:5173` (Vite alternate port)
+
+**For production deployment:**
+1. Set the `ALLOWED_ORIGINS` environment variable with your production domain
+2. Example: `ALLOWED_ORIGINS=https://happytails.vercel.app,https://www.happytails.com`
+3. Requests from unauthorized origins will be rejected with a CORS error
+
+The CORS configuration allows:
+- Credentials (cookies, authorization headers)
+- Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS
+- Headers: Content-Type, Authorization
+- Exposed headers: RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset
 
 ## API Endpoints
 
