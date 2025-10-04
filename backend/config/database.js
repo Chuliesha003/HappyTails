@@ -8,7 +8,13 @@ const connectDB = async () => {
     console.log(`📊 Database: ${conn.connection.name}`);
   } catch (error) {
     console.error(`❌ MongoDB Connection Error: ${error.message}`);
-    process.exit(1);
+    
+    // In development, don't exit - allow server to run without DB
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    } else {
+      console.warn('⚠️  Running in development mode without database connection');
+    }
   }
 };
 
@@ -18,12 +24,21 @@ mongoose.connection.on('disconnected', () => {
 });
 
 mongoose.connection.on('error', (err) => {
-  console.error(`❌ MongoDB error: ${err}`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(`⚠️  MongoDB error (development): ${err.message}`);
+  } else {
+    console.error(`❌ MongoDB error: ${err}`);
+  }
 });
 
+// Graceful shutdown
 process.on('SIGINT', async () => {
-  await mongoose.connection.close();
-  console.log('MongoDB connection closed due to app termination');
+  try {
+    await mongoose.connection.close();
+    console.log('MongoDB connection closed due to app termination');
+  } catch (error) {
+    console.log('MongoDB connection already closed');
+  }
   process.exit(0);
 });
 

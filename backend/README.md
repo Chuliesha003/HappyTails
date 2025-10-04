@@ -43,12 +43,21 @@ backend/
 npm install
 ```
 
-2. Create `.env` file with required variables (see Environment Variables section)
+2. Set up Firebase Authentication:
+   - Follow the detailed guide in `FIREBASE_SETUP.md`
+   - Download service account credentials from Firebase Console
+   - Configure environment variables with Firebase credentials
 
-3. Start development server:
+3. Create `.env` file with required variables (see Environment Variables section)
+
+4. Start development server:
 ```bash
 npm run dev
 ```
+
+5. Test authentication setup:
+   - Navigate to `http://localhost:5000/api/test/auth/optional` (should work without token)
+   - Protected route: `http://localhost:5000/api/test/auth/required` (requires Firebase token)
 
 ## Environment Variables
 

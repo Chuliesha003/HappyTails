@@ -2,11 +2,15 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const connectDB = require('./config/database');
+const { initializeFirebase } = require('./config/firebase');
 
 const app = express();
 
 // Connect to MongoDB
 connectDB();
+
+// Initialize Firebase
+initializeFirebase();
 
 // Middleware
 app.use(cors({
@@ -33,6 +37,10 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Test routes (for authentication testing)
+const testRoutes = require('./routes/testRoutes');
+app.use('/api', testRoutes);
 
 const PORT = process.env.PORT || 5000;
 
