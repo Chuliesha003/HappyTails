@@ -38,6 +38,10 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// API Routes
+const authRoutes = require('./routes/authRoutes');
+app.use('/api/auth', authRoutes);
+
 // Test routes (for authentication testing)
 const testRoutes = require('./routes/testRoutes');
 app.use('/api', testRoutes);
