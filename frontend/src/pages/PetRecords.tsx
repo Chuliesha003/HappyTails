@@ -6,21 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
-import { Edit, Plus } from "lucide-react";
-
-interface PetData {
-  id: string;
-  name: string;
-  breed: string;
-  age: string;
-  weight: string;
-  gender: string;
-  species: string;
-  color: string;
-  medicalHistory: string;
-  allergies: string;
-}
+import { Edit, Plus, Trash2, AlertCircle, Loader2 } from "lucide-react";
+import { petsService } from "@/services/pets";
+import { toast } from "@/hooks/use-toast";
+import type { Pet } from "@/types/api";
 
 interface FormData {
   name: string;
@@ -35,8 +26,11 @@ interface FormData {
 }
 
 const PetRecords = () => {
-  const [pets, setPets] = useState<PetData[]>([]);
+  const [pets, setPets] = useState<Pet[]>([]);
   const [editingPetId, setEditingPetId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     name: "",
     breed: "",
@@ -49,25 +43,29 @@ const PetRecords = () => {
     allergies: ""
   });
 
-  // Load pets from localStorage on mount
+  // Load pets from backend on mount
   useEffect(() => {
-    const saved = localStorage.getItem('petRecords');
-    if (saved) {
-      try {
-        const parsed: PetData[] = JSON.parse(saved);
-        if (Array.isArray(parsed)) setPets(parsed);
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to parse petRecords from localStorage', e);
-      }
-    }
+    loadPets();
   }, []);
 
-  // Persist pets to localStorage
-  useEffect(() => {
-    if (pets.length) localStorage.setItem('petRecords', JSON.stringify(pets));
-    else localStorage.removeItem('petRecords');
-  }, [pets]);
+  const loadPets = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await petsService.getAllPets();
+      setPets(data);
+    } catch (err) {
+      console.error('Failed to load pets:', err);
+      setError('Failed to load pets. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to load pets. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({
@@ -91,38 +89,94 @@ const PetRecords = () => {
     setEditingPetId(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const requiredOk = !!(formData.name && formData.breed && formData.age && formData.weight && formData.gender);
     if (!requiredOk) return;
 
-    if (editingPetId) {
-      setPets(prev => 
-        prev.map(p => p.id === editingPetId ? { ...formData, id: editingPetId } as PetData : p)
-      );
-    } else {
-      const newPet: PetData = {
-        ...formData,
-        id: Date.now().toString()
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      const petData = {
+        name: formData.name,
+        species: formData.species || 'Dog',
+        breed: formData.breed,
+        age: Number(formData.age),
+        weight: Number(formData.weight),
+        gender: formData.gender as 'male' | 'female',
+        color: formData.color,
+        medicalHistory: formData.medicalHistory,
+        allergies: formData.allergies
       };
-      setPets(prev => [...prev, newPet]);
+
+      if (editingPetId) {
+        // Update existing pet
+        const updated = await petsService.updatePet(editingPetId, petData);
+        setPets(prev => prev.map(p => p.id === editingPetId ? updated : p));
+        toast({
+          title: "Success",
+          description: `${formData.name}'s information has been updated.`
+        });
+      } else {
+        // Create new pet
+        const newPet = await petsService.createPet(petData);
+        setPets(prev => [...prev, newPet]);
+        toast({
+          title: "Success",
+          description: `${formData.name} has been added to your pets.`
+        });
+      }
+      resetForm();
+    } catch (err) {
+      console.error('Failed to save pet:', err);
+      const errorMessage = editingPetId ? 'Failed to update pet.' : 'Failed to add pet.';
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage + ' Please try again.',
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    resetForm();
   };
 
-  const handleEditPet = (pet: PetData) => {
+  const handleEditPet = (pet: Pet) => {
     setFormData({
       name: pet.name,
       breed: pet.breed,
-      age: pet.age,
-      weight: pet.weight,
+      age: String(pet.age),
+      weight: String(pet.weight),
       gender: pet.gender,
       species: pet.species,
-      color: pet.color,
-      medicalHistory: pet.medicalHistory,
-      allergies: pet.allergies
+      color: pet.color || '',
+      medicalHistory: pet.medicalHistory || '',
+      allergies: pet.allergies || ''
     });
     setEditingPetId(pet.id);
+  };
+
+  const handleDeletePet = async (petId: string, petName: string) => {
+    if (!confirm(`Are you sure you want to delete ${petName}?`)) {
+      return;
+    }
+
+    try {
+      await petsService.deletePet(petId);
+      setPets(prev => prev.filter(p => p.id !== petId));
+      toast({
+        title: "Success",
+        description: `${petName} has been removed.`
+      });
+    } catch (err) {
+      console.error('Failed to delete pet:', err);
+      toast({
+        title: "Error",
+        description: "Failed to delete pet. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleCancelEdit = () => resetForm();
@@ -141,6 +195,18 @@ const PetRecords = () => {
           {editingPetId ? "Update your pet's information" : "Add your pet's information to get started."}
         </p>
       </header>
+
+      {/* Error Message */}
+      {error && !isLoading && (
+        <Card className="max-w-3xl mx-auto border-destructive">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              <p>{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Pet Information Form */}
       <Card className="max-w-3xl mx-auto">
@@ -269,11 +335,18 @@ const PetRecords = () => {
             </div>
             
             <div className="flex gap-2">
-              <Button type="submit" className="flex-1">
-                {editingPetId ? "Update Pet" : "Add Pet"}
+              <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {editingPetId ? "Updating..." : "Adding..."}
+                  </>
+                ) : (
+                  editingPetId ? "Update Pet" : "Add Pet"
+                )}
               </Button>
               {editingPetId && (
-                <Button type="button" variant="outline" onClick={handleCancelEdit}>
+                <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={isSubmitting}>
                   Cancel
                 </Button>
               )}
@@ -282,8 +355,43 @@ const PetRecords = () => {
         </CardContent>
       </Card>
 
+      {/* Loading Skeleton */}
+      {isLoading && (
+        <div className="space-y-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold">My Pets</h2>
+            <p className="text-muted-foreground">Loading your pets...</p>
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-5 w-24" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                  <Skeleton className="h-9 w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Pet Details Display */}
-      {pets.length > 0 && (
+      {!isLoading && pets.length > 0 && (
         <div className="space-y-6">
           <div className="text-center">
             <h2 className="text-2xl font-bold">My Pets</h2>
@@ -354,20 +462,41 @@ const PetRecords = () => {
                   
                   <Separator />
                   
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => handleEditPet(pet)}
-                    className="w-full"
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Update Pet Details
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleEditPet(pet)}
+                      className="flex-1"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleDeletePet(pet.id, pet.name)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && pets.length === 0 && (
+        <Card className="max-w-3xl mx-auto">
+          <CardContent className="pt-6 pb-6 text-center">
+            <p className="text-muted-foreground">
+              No pets added yet. Add your first pet using the form above!
+            </p>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
