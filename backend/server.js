@@ -42,10 +42,12 @@ app.get('/api/health', (req, res) => {
 const authRoutes = require('./routes/authRoutes');
 const petRoutes = require('./routes/petRoutes');
 const vetRoutes = require('./routes/vetRoutes');
+const appointmentRoutes = require('./routes/appointmentRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/pets', petRoutes);
 app.use('/api/vets', vetRoutes);
+app.use('/api/appointments', appointmentRoutes);
 
 // Test routes (for authentication testing)
 const testRoutes = require('./routes/testRoutes');
