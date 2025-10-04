@@ -301,17 +301,19 @@ const SymptomChecker = () => {
 };
 import { AuthProvider } from "./contexts/AuthContext";
 import { withAuth } from "./components/withAuth";
+import { withRole } from "./components/withRole";
 
 const queryClient = new QueryClient();
 
-// Create protected versions of components with feature requirements
-const ProtectedVets = withAuth(Vets, { requiredFeature: 'vet-finder' });
-const ProtectedPetRecords = withAuth(PetRecords, { requiredFeature: 'pet-records' });
-const ProtectedAdminDashboard = withAuth(AdminDashboard, { requiredFeature: 'admin-dashboard' });
-const ProtectedUserDashboard = withAuth(UserDashboard, { requiredFeature: 'user-dashboard' });
+// Create protected versions of components with authentication and role requirements
+const ProtectedPetRecords = withAuth(PetRecords);
+const ProtectedUserDashboard = withAuth(UserDashboard);
+const ProtectedBookAppointment = withAuth(BookAppointment);
+const ProtectedAdminDashboard = withRole(AdminDashboard, { allowedRoles: ['admin'] });
 
 const AppContent = () => {
   const location = useLocation();
+
   const hideFooter = location.pathname === '/login' || location.pathname === '/get-started';
 
   return (
@@ -323,12 +325,17 @@ const AppContent = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/get-started" element={<GetStarted />} />
         <Route path="/symptom-checker" element={<SymptomChecker />} />
-        <Route path="/vets" element={<ProtectedVets />} />
-        <Route path="/book-appointment" element={<BookAppointment />} />
-        <Route path="/pet-records" element={<ProtectedPetRecords />} />
+        <Route path="/vets" element={<Vets />} />
         <Route path="/resources" element={<Resources />} />
-        <Route path="/admin-dashboard" element={<ProtectedAdminDashboard />} />
+        
+        {/* Protected routes - require authentication */}
+        <Route path="/pet-records" element={<ProtectedPetRecords />} />
+        <Route path="/book-appointment" element={<ProtectedBookAppointment />} />
         <Route path="/user-dashboard" element={<ProtectedUserDashboard />} />
+        
+        {/* Admin-only routes */}
+        <Route path="/admin-dashboard" element={<ProtectedAdminDashboard />} />
+        
         <Route path="*" element={<NotFound />} />
       </Routes>
       {!hideFooter && <SiteFooter />}
@@ -370,6 +377,7 @@ const App = () => (
       <TooltipProvider>
         <AuthProvider>
           <BrowserRouter>
+
             <AppContent />
           </BrowserRouter>
         </AuthProvider>
