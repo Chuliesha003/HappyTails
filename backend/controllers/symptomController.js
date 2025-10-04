@@ -1,0 +1,219 @@
+const { analyzeSymptoms, getPetHealthAdvice, assessEmergency } = require('../utils/geminiService');
+const User = require('../models/User');
+
+/**
+ * Analyze pet symptoms using AI
+ */
+const checkSymptoms = async (req, res) => {
+  try {
+    const { petType, symptoms, duration, severity, additionalInfo } = req.body;
+
+    // Validate required fields
+    if (!petType || !symptoms) {
+      return res.status(400).json({
+        success: false,
+        message: 'Pet type and symptoms are required',
+      });
+    }
+
+    // Check guest usage limits for authenticated users
+    if (req.user) {
+      const user = await User.findByFirebaseUid(req.user.uid);
+
+      if (user) {
+        // Check if user has reached limit
+        if (user.hasReachedGuestLimit()) {
+          return res.status(429).json({
+            success: false,
+            message: 'You have reached your usage limit. Please upgrade your account or contact support.',
+            usageCount: user.guestUsageCount,
+            limit: 3,
+          });
+        }
+
+        // Increment usage count
+        await user.incrementGuestUsage();
+      }
+    }
+
+    // Analyze symptoms using Gemini AI
+    const analysis = await analyzeSymptoms({
+      petType,
+      symptoms,
+      duration,
+      severity,
+      additionalInfo,
+    });
+
+    res.status(200).json({
+      success: true,
+      analysis,
+      recommendations: {
+        findVet: '/api/vets',
+        bookAppointment: '/api/appointments',
+      },
+    });
+  } catch (error) {
+    console.error('Check symptoms error:', error);
+
+    if (error.message.includes('API key')) {
+      return res.status(503).json({
+        success: false,
+        message: 'AI service is currently unavailable. Please try again later.',
+      });
+    }
+
+    if (error.message.includes('quota')) {
+      return res.status(429).json({
+        success: false,
+        message: 'Service temporarily unavailable due to high demand. Please try again in a few minutes.',
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to analyze symptoms',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get pet health advice
+ */
+const getHealthAdvice = async (req, res) => {
+  try {
+    const { question, petType } = req.body;
+
+    if (!question) {
+      return res.status(400).json({
+        success: false,
+        message: 'Question is required',
+      });
+    }
+
+    // Check guest usage limits for authenticated users
+    if (req.user) {
+      const user = await User.findByFirebaseUid(req.user.uid);
+
+      if (user && user.hasReachedGuestLimit()) {
+        return res.status(429).json({
+          success: false,
+          message: 'You have reached your usage limit. Please upgrade your account.',
+          usageCount: user.guestUsageCount,
+          limit: 3,
+        });
+      }
+
+      if (user) {
+        await user.incrementGuestUsage();
+      }
+    }
+
+    const advice = await getPetHealthAdvice(question, petType);
+
+    res.status(200).json({
+      success: true,
+      advice,
+    });
+  } catch (error) {
+    console.error('Get health advice error:', error);
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get health advice',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Assess emergency situation
+ */
+const checkEmergency = async (req, res) => {
+  try {
+    const { petType, symptoms, vitalSigns } = req.body;
+
+    if (!petType || !symptoms) {
+      return res.status(400).json({
+        success: false,
+        message: 'Pet type and symptoms are required',
+      });
+    }
+
+    // Emergency checks don't count toward usage limits
+    const assessment = await assessEmergency({
+      petType,
+      symptoms,
+      vitalSigns,
+    });
+
+    res.status(200).json({
+      success: true,
+      assessment,
+      emergencyVets: {
+        message: 'Find emergency veterinary clinics near you',
+        endpoint: '/api/vets?emergency=true',
+      },
+    });
+  } catch (error) {
+    console.error('Check emergency error:', error);
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to assess emergency',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get usage statistics for current user
+ */
+const getUsageStats = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(200).json({
+        success: true,
+        isGuest: true,
+        message: 'Sign in to track your usage and get unlimited access',
+        usageCount: 0,
+        limit: 3,
+      });
+    }
+
+    const user = await User.findByFirebaseUid(req.user.uid);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    const hasReachedLimit = user.hasReachedGuestLimit();
+
+    res.status(200).json({
+      success: true,
+      isGuest: false,
+      usageCount: user.guestUsageCount,
+      limit: 3,
+      hasReachedLimit,
+      remainingUses: Math.max(0, 3 - user.guestUsageCount),
+    });
+  } catch (error) {
+    console.error('Get usage stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch usage statistics',
+      error: error.message,
+    });
+  }
+};
+
+module.exports = {
+  checkSymptoms,
+  getHealthAdvice,
+  checkEmergency,
+  getUsageStats,
+};

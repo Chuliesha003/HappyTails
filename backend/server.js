@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 const connectDB = require('./config/database');
 const { initializeFirebase } = require('./config/firebase');
+const { initializeGemini } = require('./utils/geminiService');
 
 const app = express();
 
@@ -11,6 +12,9 @@ connectDB();
 
 // Initialize Firebase
 initializeFirebase();
+
+// Initialize Gemini AI
+initializeGemini();
 
 // Middleware
 app.use(cors({
@@ -43,11 +47,13 @@ const authRoutes = require('./routes/authRoutes');
 const petRoutes = require('./routes/petRoutes');
 const vetRoutes = require('./routes/vetRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
+const symptomRoutes = require('./routes/symptomRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/pets', petRoutes);
 app.use('/api/vets', vetRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/symptom-checker', symptomRoutes);
 
 // Test routes (for authentication testing)
 const testRoutes = require('./routes/testRoutes');
