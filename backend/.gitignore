@@ -17,6 +17,11 @@ serviceAccountKey.json
 logs/
 *.log
 
+# Test coverage
+coverage/
+.nyc_output/
+*.lcov
+
 # OS files
 .DS_Store
 Thumbs.db
