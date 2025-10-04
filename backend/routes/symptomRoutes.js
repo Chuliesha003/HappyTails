@@ -5,10 +5,73 @@ const { optionalAuth } = require('../middleware/auth');
 const { aiLimiter } = require('../middleware/security');
 
 /**
- * @route   POST /api/symptom-checker/analyze
- * @desc    Analyze pet symptoms using AI
- * @access  Public (with optional auth for usage tracking)
- * @body    { petType, symptoms, duration?, severity?, additionalInfo? }
+ * @swagger
+ * /api/symptom-checker/analyze:
+ *   post:
+ *     summary: Analyze pet symptoms using AI
+ *     description: Uses Google Gemini AI to analyze pet symptoms and provide recommendations. Rate limited to 10 requests per hour.
+ *     tags: [Symptom Checker]
+ *     security:
+ *       - bearerAuth: []
+ *       - {}
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - petType
+ *               - symptoms
+ *             properties:
+ *               petType:
+ *                 type: string
+ *                 enum: [dog, cat, bird, rabbit, other]
+ *                 example: dog
+ *               age:
+ *                 type: number
+ *                 description: Age in years
+ *                 example: 5
+ *               symptoms:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["coughing", "lethargy", "loss of appetite"]
+ *               duration:
+ *                 type: string
+ *                 example: "2 days"
+ *               severity:
+ *                 type: string
+ *                 enum: [mild, moderate, severe]
+ *                 example: moderate
+ *               additionalInfo:
+ *                 type: string
+ *                 example: "Pet has been less active than usual"
+ *     responses:
+ *       200:
+ *         description: Symptom analysis completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SymptomAnalysis'
+ *       400:
+ *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       429:
+ *         description: Rate limit exceeded (10 requests per hour)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       503:
+ *         description: AI service unavailable
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/analyze', aiLimiter, optionalAuth, symptomController.checkSymptoms);
 

@@ -5,10 +5,57 @@ const { verifyToken, optionalAuth } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/security');
 
 /**
- * @route   POST /api/auth/register
- * @desc    Register new user or login existing user
- * @access  Public
- * @body    { idToken: string, fullName?: string }
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register new user or login existing user
+ *     description: Authenticates user with Firebase ID token and creates/updates user record in database
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - idToken
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *                 description: Firebase authentication ID token
+ *                 example: eyJhbGciOiJSUzI1NiIsImtpZCI6Ijk3...
+ *               fullName:
+ *                 type: string
+ *                 description: User's full name (optional, for first-time registration)
+ *                 example: John Doe
+ *     responses:
+ *       200:
+ *         description: User registered/logged in successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: User authenticated successfully
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Invalid ID token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Too many authentication attempts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/register', authLimiter, authController.registerOrLogin);
 

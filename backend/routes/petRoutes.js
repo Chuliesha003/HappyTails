@@ -21,10 +21,55 @@ router.get('/', petController.getAllPets);
 router.get('/:id', petController.getPetById);
 
 /**
- * @route   POST /api/pets
- * @desc    Create a new pet
- * @access  Private
- * @body    { name, species, breed, age, weight, etc. }
+ * @swagger
+ * /api/pets:
+ *   post:
+ *     summary: Create a new pet record
+ *     description: Creates a new pet record for the authenticated user
+ *     tags: [Pets]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Pet'
+ *           example:
+ *             name: Max
+ *             species: dog
+ *             breed: Golden Retriever
+ *             birthDate: "2020-01-15"
+ *             gender: male
+ *             weight: 30.5
+ *             color: Golden
+ *             allergies: ["peanuts"]
+ *     responses:
+ *       201:
+ *         description: Pet created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 pet:
+ *                   $ref: '#/components/schemas/Pet'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/', petController.createPet);
 

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const swaggerUi = require('swagger-ui-express');
 require('dotenv').config();
 const connectDB = require('./config/database');
 const { initializeFirebase } = require('./config/firebase');
@@ -18,6 +19,7 @@ const {
   performanceMonitor 
 } = require('./middleware/logging');
 const { logger, logSystem } = require('./utils/logger');
+const swaggerSpec = require('./config/swagger');
 
 const app = express();
 
@@ -154,6 +156,18 @@ app.get('/api/health', (req, res) => {
   }
 
   res.json(healthInfo);
+});
+
+// API Documentation with Swagger
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'HappyTails API Documentation',
+}));
+
+// Swagger JSON endpoint
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
 });
 
 // API Routes
