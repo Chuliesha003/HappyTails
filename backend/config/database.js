@@ -67,7 +67,10 @@ mongoose.connection.on('error', (err) => {
   });
 });
 
-// Graceful shutdown
+// Graceful shutdown - only handle explicit termination signals
+// Remove this handler as it may be causing premature exits
+// The server.js will handle its own shutdown gracefully
+/*
 process.on('SIGINT', async () => {
   try {
     await mongoose.connection.close();
@@ -77,5 +80,6 @@ process.on('SIGINT', async () => {
   }
   process.exit(0);
 });
+*/
 
 module.exports = connectDB;
