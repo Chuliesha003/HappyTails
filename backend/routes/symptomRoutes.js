@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const symptomController = require('../controllers/symptomController');
 const { optionalAuth } = require('../middleware/auth');
+const { aiLimiter } = require('../middleware/security');
 
 /**
  * @route   POST /api/symptom-checker/analyze
@@ -9,7 +10,7 @@ const { optionalAuth } = require('../middleware/auth');
  * @access  Public (with optional auth for usage tracking)
  * @body    { petType, symptoms, duration?, severity?, additionalInfo? }
  */
-router.post('/analyze', optionalAuth, symptomController.checkSymptoms);
+router.post('/analyze', aiLimiter, optionalAuth, symptomController.checkSymptoms);
 
 /**
  * @route   POST /api/symptom-checker/advice
@@ -17,7 +18,7 @@ router.post('/analyze', optionalAuth, symptomController.checkSymptoms);
  * @access  Public (with optional auth for usage tracking)
  * @body    { question, petType? }
  */
-router.post('/advice', optionalAuth, symptomController.getHealthAdvice);
+router.post('/advice', aiLimiter, optionalAuth, symptomController.getHealthAdvice);
 
 /**
  * @route   POST /api/symptom-checker/emergency
@@ -25,7 +26,7 @@ router.post('/advice', optionalAuth, symptomController.getHealthAdvice);
  * @access  Public
  * @body    { petType, symptoms, vitalSigns? }
  */
-router.post('/emergency', symptomController.checkEmergency);
+router.post('/emergency', aiLimiter, symptomController.checkEmergency);
 
 /**
  * @route   GET /api/symptom-checker/usage

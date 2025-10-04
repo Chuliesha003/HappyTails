@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const resourceController = require('../controllers/resourceController');
 const { verifyToken, optionalAuth, checkRole } = require('../middleware/auth');
+const { searchLimiter, createLimiter } = require('../middleware/security');
 
 /**
  * Public Routes
  */
 
 // Get all published articles (with filters and search)
-router.get('/', optionalAuth, resourceController.getAllArticles);
+router.get('/', searchLimiter, optionalAuth, resourceController.getAllArticles);
 
 // Get popular articles
 router.get('/popular', resourceController.getPopularArticles);
@@ -37,7 +38,7 @@ router.post('/:id/like', verifyToken, resourceController.likeArticle);
  */
 
 // Create new article
-router.post('/', verifyToken, checkRole(['admin']), resourceController.createArticle);
+router.post('/', createLimiter, verifyToken, checkRole(['admin']), resourceController.createArticle);
 
 // Update article
 router.put('/:id', verifyToken, checkRole(['admin']), resourceController.updateArticle);

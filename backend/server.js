@@ -1,13 +1,22 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 require('dotenv').config();
 const connectDB = require('./config/database');
 const { initializeFirebase } = require('./config/firebase');
 const { initializeGemini } = require('./utils/geminiService');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const { sanitize } = require('./middleware/validator');
+const { 
+  generalLimiter, 
+  sanitizeData, 
+  configureTrustedProxy 
+} = require('./middleware/security');
 
 const app = express();
+
+// Configure trusted proxy if behind reverse proxy
+configureTrustedProxy(app);
 
 // Connect to MongoDB
 connectDB();
@@ -18,16 +27,54 @@ initializeFirebase();
 // Initialize Gemini AI
 initializeGemini();
 
-// Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
-  credentials: true
+// Security Middleware
+// Helmet - Sets various HTTP headers for security
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
 }));
+
+// CORS Configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:8080', 'http://localhost:3000', 'http://localhost:5173'];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
+}));
+
+// Body parser middleware with size limits
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Sanitization middleware
+// Data sanitization against NoSQL injection
+app.use(sanitizeData);
+
+// Input validation sanitization
 app.use(sanitize);
+
+// Apply general rate limiting to all routes
+app.use(generalLimiter);
 
 // Basic health check route
 app.get('/', (req, res) => {

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const vetController = require('../controllers/vetController');
 const { verifyToken, checkRole } = require('../middleware/auth');
+const { searchLimiter, createLimiter } = require('../middleware/security');
 
 /**
  * @route   GET /api/vets
@@ -9,7 +10,7 @@ const { verifyToken, checkRole } = require('../middleware/auth');
  * @access  Public
  * @query   city, specialization, search, sort, page, limit
  */
-router.get('/', vetController.getAllVets);
+router.get('/', searchLimiter, vetController.getAllVets);
 
 /**
  * @route   GET /api/vets/specializations
@@ -38,7 +39,7 @@ router.get('/:id', vetController.getVetById);
  * @access  Private (Admin)
  * @body    { name, email, phoneNumber, clinicName, specialization, licenseNumber, etc. }
  */
-router.post('/', verifyToken, checkRole('admin'), vetController.createVet);
+router.post('/', createLimiter, verifyToken, checkRole('admin'), vetController.createVet);
 
 /**
  * @route   PUT /api/vets/:id

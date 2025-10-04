@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const { verifyToken, optionalAuth } = require('../middleware/auth');
+const { authLimiter } = require('../middleware/security');
 
 /**
  * @route   POST /api/auth/register
@@ -9,7 +10,7 @@ const { verifyToken, optionalAuth } = require('../middleware/auth');
  * @access  Public
  * @body    { idToken: string, fullName?: string }
  */
-router.post('/register', authController.registerOrLogin);
+router.post('/register', authLimiter, authController.registerOrLogin);
 
 /**
  * @route   POST /api/auth/login
@@ -17,7 +18,7 @@ router.post('/register', authController.registerOrLogin);
  * @access  Public
  * @body    { idToken: string }
  */
-router.post('/login', authController.registerOrLogin);
+router.post('/login', authLimiter, authController.registerOrLogin);
 
 /**
  * @route   GET /api/auth/me
