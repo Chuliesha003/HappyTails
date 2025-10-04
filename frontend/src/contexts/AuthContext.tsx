@@ -1,13 +1,26 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  User as FirebaseUser
+} from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { authService } from '@/services/auth';
+import type { User as ApiUser } from '@/types/api';
 
-export type UserRole = 'guest' | 'registered' | 'admin';
+export type UserRole = 'guest' | 'user' | 'vet' | 'admin';
 
 export interface User {
-  id?: string;
-  email?: string;
-  fullName?: string;
+  id: string;
+  email: string;
+  fullName: string;
   role: UserRole;
-  features: string[];
+  phoneNumber?: string;
+  address?: string;
+  petName?: string;
+  petType?: string;
 }
 
 export interface AuthState {
@@ -20,62 +33,45 @@ export interface AuthState {
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   register: (userData: RegisterData) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   incrementGuestUsage: () => void;
   canUseSymptomChecker: () => boolean;
   canAccessFeature: (feature: string) => boolean;
   isRegistered: () => boolean;
   isGuest: () => boolean;
   isAdmin: () => boolean;
+  isVet: () => boolean;
   getUserRole: () => UserRole;
 }
 
 export interface RegisterData {
   fullName: string;
   email: string;
-  petName: string;
-  petType: string;
+  petName?: string;
+  petType?: string;
   password: string;
+  phoneNumber?: string;
+  address?: string;
 }
-
-// Email-based role configuration with specific credentials
-const EMAIL_ROLES: Record<string, { role: UserRole; features: string[]; password?: string }> = {
-  // Admin accounts (full access)
-  'admin@happytails.com': { 
-    role: 'admin', 
-    features: ['symptom-checker', 'vet-finder', 'pet-records', 'admin-dashboard'],
-    password: 'admin123'
-  },
-
-  // Demo admin account
-  'demo.admin@happytails.com': { 
-    role: 'admin', 
-    features: ['symptom-checker', 'vet-finder', 'pet-records', 'admin-dashboard'],
-    password: 'demo123'
-  },
-
-  // Regular user accounts
-  'user@happytails.com': { 
-    role: 'registered', 
-    features: ['symptom-checker', 'vet-finder', 'pet-records', 'user-dashboard'],
-    password: 'user123'
-  },
-
-  // Demo user accounts
-  'demo.user@happytails.com': { 
-    role: 'registered', 
-    features: ['symptom-checker', 'vet-finder', 'pet-records', 'user-dashboard'],
-    password: 'demo123'
-  },
-};
-
-const DEFAULT_REGISTERED_FEATURES = ['symptom-checker', 'vet-finder', 'pet-records', 'user-dashboard'];
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  USER: 'happytails_user',
   GUEST_USAGE: 'happytails_guest_usage'
+};
+
+// Helper to convert API user to local user format
+const convertApiUser = (apiUser: ApiUser): User => {
+  return {
+    id: apiUser.id,
+    email: apiUser.email,
+    fullName: apiUser.fullName,
+    role: apiUser.role as UserRole,
+    phoneNumber: apiUser.phoneNumber,
+    address: apiUser.address,
+    petName: apiUser.petName,
+    petType: apiUser.petType,
+  };
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -84,76 +80,49 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [guestUsageCount, setGuestUsageCount] = useState(0);
   const maxGuestUsage = 2;
 
-  // Initialize auth state from localStorage
+  // Initialize auth state from Firebase + backend
   useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
-      const savedUsage = sessionStorage.getItem(STORAGE_KEYS.GUEST_USAGE);
-      
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
-      } else {
-        // Set as guest user
-        setUser({ role: 'guest', features: [] });
-      }
-      
-      if (savedUsage) {
-        setGuestUsageCount(parseInt(savedUsage, 10));
-      }
-    } catch (error) {
-      console.error('Error loading auth state:', error);
-      setUser({ role: 'guest', features: [] });
-    } finally {
-      setIsLoading(false);
+    const savedUsage = sessionStorage.getItem(STORAGE_KEYS.GUEST_USAGE);
+    if (savedUsage) {
+      setGuestUsageCount(parseInt(savedUsage, 10));
     }
+
+    // Listen to Firebase auth state changes
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      setIsLoading(true);
+      
+      if (firebaseUser) {
+        try {
+          // Get user details from backend
+          const apiUser = await authService.getCurrentUser();
+          setUser(convertApiUser(apiUser));
+        } catch (error) {
+          console.error('Error fetching user from backend:', error);
+          // If backend fails, sign out from Firebase
+          await signOut(auth);
+          setUser(null);
+        }
+      } else {
+        // No authenticated user - set as guest
+        setUser(null);
+      }
+      
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     
     try {
-      // Check if email has specific role configuration
-      const emailConfig = EMAIL_ROLES[email.toLowerCase()];
+      // First, authenticate with Firebase
+      await signInWithEmailAndPassword(auth, email, password);
       
-      let loggedInUser: User;
-      if (emailConfig) {
-        // Validate password for configured accounts
-        if (emailConfig.password && password !== emailConfig.password) {
-          return false; // Invalid password
-        }
-        
-        // Use configured role and features
-        const getFullName = (email: string, role: UserRole) => {
-          if (email === 'admin@happytails.com') return 'Administrator';
-          if (email === 'demo.admin@happytails.com') return 'Demo Administrator';
-          if (email === 'user@happytails.com') return 'User';
-          if (email === 'demo.user@happytails.com') return 'Demo User';
-          
-          // Generate name from email
-          const namePart = email.split('@')[0].replace(/[._]/g, ' ');
-          return namePart.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-        };
-
-        loggedInUser = {
-          id: Date.now().toString(),
-          email,
-          fullName: getFullName(email, emailConfig.role),
-          role: emailConfig.role,
-          features: emailConfig.features
-        };
-      } else {
-        // Default to registered user for unlisted emails
-        loggedInUser = {
-          id: Date.now().toString(),
-          email,
-          fullName: 'Registered User',
-          role: 'registered',
-          features: DEFAULT_REGISTERED_FEATURES
-        };
-      }
-      
-      setUser(loggedInUser);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(loggedInUser));
+      // Firebase will trigger onAuthStateChanged which will:
+      // 1. Fetch user from backend
+      // 2. Set user state
       
       // Clear guest usage when user logs in
       setGuestUsageCount(0);
@@ -162,9 +131,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return true;
     } catch (error) {
       console.error('Login error:', error);
-      return false;
-    } finally {
       setIsLoading(false);
+      return false;
     }
   };
 
@@ -172,32 +140,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
-      // Check if email has specific role configuration
-      const emailConfig = EMAIL_ROLES[userData.email.toLowerCase()];
+      // First, create Firebase account
+      const userCredential = await createUserWithEmailAndPassword(
+        auth, 
+        userData.email, 
+        userData.password
+      );
       
-      let newUser: User;
-      if (emailConfig) {
-        // Use configured role and features
-        newUser = {
-          id: Date.now().toString(),
-          email: userData.email,
-          fullName: userData.fullName,
-          role: emailConfig.role,
-          features: emailConfig.features
-        };
-      } else {
-        // Default to registered user for unlisted emails
-        newUser = {
-          id: Date.now().toString(),
-          email: userData.email,
-          fullName: userData.fullName,
-          role: 'registered',
-          features: DEFAULT_REGISTERED_FEATURES
-        };
-      }
+      // Get Firebase ID token to send to backend
+      const idToken = await userCredential.user.getIdToken();
       
-      setUser(newUser);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(newUser));
+      // Register with backend (backend will verify Firebase token)
+      const response = await authService.register({
+        fullName: userData.fullName,
+        email: userData.email,
+        password: idToken, // Send Firebase token instead of password
+        petName: userData.petName,
+        petType: userData.petType,
+        phoneNumber: userData.phoneNumber,
+        address: userData.address,
+      });
+      
+      // Set user state
+      setUser(convertApiUser(response.user));
       
       // Clear guest usage when user registers
       setGuestUsageCount(0);
@@ -206,16 +171,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return true;
     } catch (error) {
       console.error('Registration error:', error);
-      return false;
-    } finally {
       setIsLoading(false);
+      return false;
     }
   };
 
-  const logout = () => {
-    setUser({ role: 'guest', features: [] });
-    localStorage.removeItem(STORAGE_KEYS.USER);
-    // Keep guest usage count when logging out
+  const logout = async (): Promise<void> => {
+    try {
+      // Sign out from Firebase
+      await signOut(auth);
+      
+      // Clear backend token
+      await authService.logout();
+      
+      // Reset to guest state
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still clear local state even if logout fails
+      setUser(null);
+    }
   };
 
   const incrementGuestUsage = () => {
@@ -233,13 +208,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const canAccessFeature = (feature: string): boolean => {
     if (!user) return false;
-    if (user.role === 'guest') return false;
-    return user.features.includes(feature);
+    // All authenticated users can access features
+    return true;
   };
 
-  const isRegistered = (): boolean => user?.role !== 'guest' && user?.role !== undefined;
-  const isGuest = (): boolean => user?.role === 'guest';
+  const isRegistered = (): boolean => !!user;
+  const isGuest = (): boolean => !user;
   const isAdmin = (): boolean => user?.role === 'admin';
+  const isVet = (): boolean => user?.role === 'vet';
   const getUserRole = (): UserRole => user?.role || 'guest';
 
   const value: AuthContextType = {
@@ -256,6 +232,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isRegistered,
     isGuest,
     isAdmin,
+    isVet,
     getUserRole
   };
 
