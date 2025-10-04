@@ -1,6 +1,7 @@
 // User and Authentication Types
 export interface User {
-  id: string;
+  _id: string;
+  id?: string; // Keep for backward compatibility
   email: string;
   fullName: string;
   role: 'user' | 'vet' | 'admin';
@@ -8,7 +9,8 @@ export interface User {
   petType?: string;
   phoneNumber?: string;
   address?: string;
-  createdAt?: string;
+  isBanned?: boolean;
+  createdAt: string;
   updatedAt?: string;
 }
 
