@@ -98,13 +98,36 @@ const createLimiter = rateLimit({
 /**
  * MongoDB injection protection
  * Sanitizes user input to prevent NoSQL injection
+ * Custom middleware for Express 5 compatibility
  */
-const sanitizeData = mongoSanitize({
-  replaceWith: '_',
-  onSanitize: ({ req, key }) => {
-    console.warn(`⚠️  Sanitized key "${key}" in request from ${req.ip}`);
-  },
-});
+const sanitizeData = (req, res, next) => {
+  try {
+    // Recursively sanitize object
+    const sanitizeObject = (obj) => {
+      if (obj && typeof obj === 'object') {
+        Object.keys(obj).forEach(key => {
+          // Remove keys that start with $ or contain .
+          if (key.startsWith('$') || key.includes('.')) {
+            console.warn(`⚠️  Sanitized key "${key}" in request from ${req.ip || 'unknown'}`);
+            delete obj[key];
+          } else if (typeof obj[key] === 'object') {
+            sanitizeObject(obj[key]);
+          }
+        });
+      }
+    };
+
+    // Sanitize body, query, and params
+    if (req.body) sanitizeObject(req.body);
+    if (req.query) sanitizeObject(req.query);
+    if (req.params) sanitizeObject(req.params);
+
+    next();
+  } catch (error) {
+    console.error('Error in sanitizeData middleware:', error);
+    next();
+  }
+};
 
 /**
  * Trusted proxy configuration

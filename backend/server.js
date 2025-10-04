@@ -12,6 +12,12 @@ const {
   sanitizeData, 
   configureTrustedProxy 
 } = require('./middleware/security');
+const { 
+  requestLogger, 
+  detailedLogger, 
+  performanceMonitor 
+} = require('./middleware/logging');
+const { logger, logSystem } = require('./utils/logger');
 
 const app = express();
 
@@ -19,13 +25,50 @@ const app = express();
 configureTrustedProxy(app);
 
 // Connect to MongoDB
-connectDB();
+connectDB()
+  .then(() => {
+    logSystem('database_connection', {
+      status: 'connected',
+      database: 'MongoDB',
+      environment: process.env.NODE_ENV || 'development',
+    });
+  })
+  .catch((error) => {
+    logSystem('database_connection', {
+      status: 'failed',
+      error: error.message,
+      environment: process.env.NODE_ENV || 'development',
+    });
+  });
 
 // Initialize Firebase
-initializeFirebase();
+try {
+  initializeFirebase();
+  logSystem('firebase_initialized', {
+    status: 'success',
+    service: 'Firebase Admin SDK',
+  });
+} catch (error) {
+  logSystem('firebase_initialized', {
+    status: 'failed',
+    error: error.message,
+  });
+}
 
 // Initialize Gemini AI
-initializeGemini();
+try {
+  initializeGemini();
+  logSystem('gemini_initialized', {
+    status: 'success',
+    service: 'Google Gemini AI',
+    model: 'gemini-pro',
+  });
+} catch (error) {
+  logSystem('gemini_initialized', {
+    status: 'failed',
+    error: error.message,
+  });
+}
 
 // Security Middleware
 // Helmet - Sets various HTTP headers for security
@@ -73,6 +116,11 @@ app.use(sanitizeData);
 // Input validation sanitization
 app.use(sanitize);
 
+// Logging middleware (before routes)
+app.use(requestLogger);
+app.use(detailedLogger);
+app.use(performanceMonitor);
+
 // Apply general rate limiting to all routes
 app.use(generalLimiter);
 
@@ -85,13 +133,27 @@ app.get('/', (req, res) => {
   });
 });
 
-// API health check
+// API health check with system metrics
 app.get('/api/health', (req, res) => {
-  res.json({
+  const healthInfo = {
     success: true,
     message: 'API is healthy',
     timestamp: new Date().toISOString(),
-  });
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    memory: {
+      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB',
+      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
+    },
+    version: '1.0.0',
+  };
+
+  // Log health check if not in production (to avoid log spam)
+  if (process.env.NODE_ENV !== 'production') {
+    logSystem('health_check', healthInfo);
+  }
+
+  res.json(healthInfo);
 });
 
 // API Routes
@@ -126,5 +188,14 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // Log server startup
+  logSystem('server_started', {
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development',
+    nodeVersion: process.version,
+    platform: process.platform,
+    timestamp: new Date().toISOString(),
+  });
 });
 module.exports = app;
