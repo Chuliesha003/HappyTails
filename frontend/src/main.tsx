@@ -1,11 +1,16 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
+import ErrorBoundary from './components/ErrorBoundary.tsx'
 import './index.css'
 
 try {
 	// eslint-disable-next-line no-console
 	console.log('Mounting React app...');
-	createRoot(document.getElementById("root")!).render(<App />);
+	createRoot(document.getElementById("root")!).render(
+		<ErrorBoundary>
+			<App />
+		</ErrorBoundary>
+	);
 } catch (err) {
 	// Fallback: render error to document so it's visible in the browser
 	// eslint-disable-next-line no-console
