@@ -48,12 +48,14 @@ const petRoutes = require('./routes/petRoutes');
 const vetRoutes = require('./routes/vetRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const symptomRoutes = require('./routes/symptomRoutes');
+const resourceRoutes = require('./routes/resourceRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/pets', petRoutes);
 app.use('/api/vets', vetRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/symptom-checker', symptomRoutes);
+app.use('/api/resources', resourceRoutes);
 
 // Test routes (for authentication testing)
 const testRoutes = require('./routes/testRoutes');
