@@ -7,20 +7,27 @@ const { verifyIdToken } = require('../config/firebase');
  */
 const registerOrLogin = async (req, res) => {
   try {
+    console.log('📝 Registration request received');
+    console.log('Request body keys:', Object.keys(req.body));
+    
     const { idToken, fullName } = req.body;
 
     if (!idToken) {
+      console.log('❌ No idToken provided');
       return res.status(400).json({
         success: false,
         message: 'Firebase ID token is required',
       });
     }
 
+    console.log('🔐 Verifying Firebase token...');
     // Verify Firebase token
     const decodedToken = await verifyIdToken(idToken);
     const { uid: firebaseUid, email } = decodedToken;
+    console.log('✅ Token verified for:', email);
 
     if (!email) {
+      console.log('❌ No email in token');
       return res.status(400).json({
         success: false,
         message: 'Email not found in Firebase token',
@@ -28,10 +35,12 @@ const registerOrLogin = async (req, res) => {
     }
 
     // Check if user already exists
+    console.log('🔍 Checking if user exists...');
     let user = await User.findByFirebaseUid(firebaseUid);
 
     if (user) {
       // User exists - login
+      console.log('✅ User already exists, logging in');
       return res.status(200).json({
         success: true,
         message: 'Login successful',
@@ -41,7 +50,9 @@ const registerOrLogin = async (req, res) => {
     }
 
     // New user - register
+    console.log('👤 Creating new user...');
     if (!fullName) {
+      console.log('❌ No fullName provided');
       return res.status(400).json({
         success: false,
         message: 'Full name is required for new user registration',
@@ -56,6 +67,7 @@ const registerOrLogin = async (req, res) => {
     });
 
     await user.save();
+    console.log('✅ User created successfully:', email);
 
     res.status(201).json({
       success: true,

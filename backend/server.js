@@ -178,6 +178,8 @@ const appointmentRoutes = require('./routes/appointmentRoutes');
 const symptomRoutes = require('./routes/symptomRoutes');
 const resourceRoutes = require('./routes/resourceRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/pets', petRoutes);
@@ -186,6 +188,8 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/symptom-checker', symptomRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Test routes (for authentication testing)
 const testRoutes = require('./routes/testRoutes');
@@ -199,9 +203,10 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 Access the API at: http://localhost:${PORT}`);
   
   // Log server startup
   logSystem('server_started', {
@@ -212,4 +217,26 @@ app.listen(PORT, () => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Handle server errors
+server.on('error', (error) => {
+  console.error('❌ Server error:', error);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use. Please close the other process or use a different port.`);
+  }
+  process.exit(1);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
 module.exports = app;

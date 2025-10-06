@@ -1,12 +1,14 @@
 const { analyzeSymptoms, getPetHealthAdvice, assessEmergency } = require('../utils/geminiService');
 const User = require('../models/User');
+const SymptomCheck = require('../models/SymptomCheck');
+const Pet = require('../models/Pet');
 
 /**
  * Analyze pet symptoms using AI
  */
 const checkSymptoms = async (req, res) => {
   try {
-    const { petType, symptoms, duration, severity, additionalInfo } = req.body;
+    const { petType, symptoms, duration, severity, additionalInfo, petId, imageUrl, guestSession } = req.body;
 
     // Validate required fields
     if (!petType || !symptoms) {
@@ -16,9 +18,11 @@ const checkSymptoms = async (req, res) => {
       });
     }
 
+    let user = null;
+    
     // Check guest usage limits for authenticated users
     if (req.user) {
-      const user = await User.findByFirebaseUid(req.user.uid);
+      user = await User.findByFirebaseUid(req.user.uid);
 
       if (user) {
         // Check if user has reached limit
@@ -45,9 +49,46 @@ const checkSymptoms = async (req, res) => {
       additionalInfo,
     });
 
+    // Save symptom check to database
+    const symptomCheckData = {
+      symptoms,
+      aiResponse: {
+        possibleConditions: analysis.possibleConditions || [],
+        urgencyLevel: analysis.urgencyLevel || 'medium',
+        recommendations: analysis.recommendations || [],
+        disclaimer: analysis.disclaimer || 'This is not a substitute for professional veterinary advice.',
+      },
+      followUpAction: analysis.urgencyLevel === 'emergency' ? 'emergency' : 
+                       analysis.urgencyLevel === 'high' ? 'schedule' : 'monitor',
+      imageUrl: imageUrl || null,
+    };
+
+    // Add user and pet references if available
+    if (user) {
+      symptomCheckData.user = user._id;
+    }
+    if (petId) {
+      // Verify pet exists and belongs to user
+      const pet = await Pet.findById(petId);
+      if (pet && (!user || pet.owner.toString() === user._id.toString())) {
+        symptomCheckData.pet = petId;
+      }
+    }
+    if (guestSession) {
+      symptomCheckData.guestSession = guestSession;
+    }
+    
+    // Store IP address for analytics
+    symptomCheckData.ipAddress = req.ip || req.connection.remoteAddress;
+
+    // Save to database
+    const symptomCheck = new SymptomCheck(symptomCheckData);
+    await symptomCheck.save();
+
     res.status(200).json({
       success: true,
       analysis,
+      symptomCheckId: symptomCheck._id, // Return ID so frontend can link to appointment
       recommendations: {
         findVet: '/api/vets',
         bookAppointment: '/api/appointments',

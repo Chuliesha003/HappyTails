@@ -2,6 +2,7 @@ const Appointment = require('../models/Appointment');
 const User = require('../models/User');
 const Pet = require('../models/Pet');
 const Vet = require('../models/Vet');
+const Notification = require('../models/Notification');
 
 /**
  * Get all appointments for authenticated user
@@ -181,6 +182,14 @@ const bookAppointment = async (req, res) => {
     // Populate references for response
     await appointment.populate('vet', 'name clinicName phoneNumber email');
     await appointment.populate('pet', 'name species breed');
+
+    // Create notification for the appointment
+    try {
+      await Notification.createAppointmentReminder(appointment, 24); // Reminder 24 hours before
+    } catch (notifError) {
+      console.error('Failed to create appointment notification:', notifError);
+      // Don't fail the appointment creation if notification fails
+    }
 
     res.status(201).json({
       success: true,
