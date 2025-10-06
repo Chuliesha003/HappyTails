@@ -9,6 +9,40 @@ import type {
 // Authentication Service
 export const authService = {
   /**
+   * Register or login with Firebase ID token
+   */
+  registerOrLogin: async (data: { idToken: string; fullName?: string }): Promise<AuthResponse> => {
+    try {
+      console.log('Calling /auth/register endpoint with data:', { 
+        idToken: data.idToken.substring(0, 20) + '...', 
+        fullName: data.fullName 
+      });
+      
+      const response = await api.post<any>('/auth/register', data);
+      
+      console.log('Backend response received:', response);
+      
+      // Backend returns { success, message, user, isNewUser }
+      // Convert to AuthResponse format expected by frontend
+      const authResponse: AuthResponse = {
+        user: response.user,
+        token: data.idToken, // Use Firebase token
+        isNewUser: response.isNewUser,
+      };
+      
+      // Store user data in localStorage
+      if (authResponse.user) {
+        localStorage.setItem('happytails_user', JSON.stringify(authResponse.user));
+      }
+      
+      return authResponse;
+    } catch (error) {
+      console.error('Auth service error:', error);
+      throw handleApiError(error);
+    }
+  },
+
+  /**
    * Register a new user
    */
   register: async (data: RegisterRequest): Promise<AuthResponse> => {

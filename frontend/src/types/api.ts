@@ -32,6 +32,7 @@ export interface RegisterRequest {
 export interface AuthResponse {
   user: User;
   token: string;
+  isNewUser?: boolean;
 }
 
 // Pet Types

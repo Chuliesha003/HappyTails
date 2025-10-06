@@ -140,6 +140,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
+      console.log('Starting registration for:', userData.email);
+      
       // First, create Firebase account
       const userCredential = await createUserWithEmailAndPassword(
         auth, 
@@ -147,30 +149,55 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         userData.password
       );
       
+      console.log('Firebase user created:', userCredential.user.uid);
+      
       // Get Firebase ID token to send to backend
       const idToken = await userCredential.user.getIdToken();
       
+      console.log('Got Firebase ID token, sending to backend...');
+      
       // Register with backend (backend will verify Firebase token)
-      const response = await authService.register({
+      const response = await authService.registerOrLogin({
+        idToken: idToken,
         fullName: userData.fullName,
-        email: userData.email,
-        password: idToken, // Send Firebase token instead of password
-        petName: userData.petName,
-        petType: userData.petType,
-        phoneNumber: userData.phoneNumber,
-        address: userData.address,
       });
+      
+      console.log('Backend response:', response);
       
       // Set user state
       setUser(convertApiUser(response.user));
+      
+      // If user provided pet information during registration, create the pet
+      if (userData.petName && userData.petType && response.isNewUser) {
+        console.log('Creating initial pet:', userData.petName);
+        try {
+          // Import pets service dynamically to avoid circular dependencies
+          const { petsService } = await import('@/services/pets');
+          await petsService.createPet({
+            name: userData.petName,
+            species: userData.petType,
+            breed: 'Unknown', // Default value
+            age: 0, // Default value - user can update later
+            weight: 0, // Default value - user can update later
+            gender: 'male', // Default value - user can update later
+          });
+          console.log('Initial pet created successfully');
+        } catch (petError) {
+          console.error('Failed to create initial pet:', petError);
+          // Don't fail registration if pet creation fails
+        }
+      }
       
       // Clear guest usage when user registers
       setGuestUsageCount(0);
       sessionStorage.removeItem(STORAGE_KEYS.GUEST_USAGE);
       
+      console.log('Registration successful!');
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration error:', error);
+      console.error('Error code:', error?.code);
+      console.error('Error message:', error?.message);
       setIsLoading(false);
       return false;
     }
