@@ -30,7 +30,10 @@ router.get('/users', adminController.getAllUsers);
 router.get('/users/:id', adminController.getUserById);
 
 // Update user role
-router.put('/users/:id/role', adminController.updateUserRole);
+router.patch('/users/:id/role', adminController.updateUserRole);
+
+// Ban/unban user
+router.patch('/users/:id/ban', adminController.toggleUserBan);
 
 // Toggle user active status (soft delete/restore)
 router.patch('/users/:id/status', adminController.toggleUserStatus);

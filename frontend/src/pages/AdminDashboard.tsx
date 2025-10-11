@@ -1,11 +1,13 @@
 import { Helmet } from "react-helmet-async";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Activity, Settings, Database, TrendingUp, Shield, FileText, AlertTriangle, Calendar, BarChart3, Clock, Globe, Loader2, CheckCircle, XCircle, Ban, Heart } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Users, Activity, Settings, Database, TrendingUp, Shield, FileText, AlertTriangle, Calendar, BarChart3, Clock, Globe, Loader2, CheckCircle, XCircle, Ban, Heart, Search, Trash2, UserCog, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { adminService } from "@/services/admin";
 import { toast } from "@/hooks/use-toast";
@@ -17,11 +19,18 @@ const AdminDashboard = () => {
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [processingUserId, setProcessingUserId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     loadStats();
-    loadUsers();
   }, []);
+
+  useEffect(() => {
+    loadUsers();
+  }, [currentPage, roleFilter, searchQuery]);
 
   const loadStats = async () => {
     try {
@@ -43,8 +52,22 @@ const AdminDashboard = () => {
   const loadUsers = async () => {
     try {
       setIsLoadingUsers(true);
-      const data = await adminService.getAllUsers({ limit: 100 });
+      const params: any = { 
+        page: currentPage, 
+        limit: 20
+      };
+      
+      if (roleFilter && roleFilter !== 'all') {
+        params.role = roleFilter;
+      }
+      
+      if (searchQuery) {
+        params.search = searchQuery;
+      }
+      
+      const data = await adminService.getAllUsers(params);
       setUsers(data.users);
+      setTotalPages(data.pagination?.totalPages || 1);
     } catch (error) {
       console.error('Failed to load users:', error);
       toast({
@@ -232,12 +255,54 @@ const AdminDashboard = () => {
         <TabsContent value="users" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Recent User Registrations
-              </CardTitle>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    User Management
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Manage registered users and their roles
+                  </CardDescription>
+                </div>
+                <Button onClick={() => loadUsers()} variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
+              {/* Search and Filter Bar */}
+              <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name or email..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={roleFilter} onValueChange={(value) => {
+                  setRoleFilter(value);
+                  setCurrentPage(1);
+                }}>
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <SelectValue placeholder="Filter by role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    <SelectItem value="user">Users</SelectItem>
+                    <SelectItem value="vet">Vets</SelectItem>
+                    <SelectItem value="admin">Admins</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* User Table */}
               {isLoadingUsers ? (
                 <div className="space-y-3">
                   {[1, 2, 3, 4, 5].map(i => (
@@ -248,17 +313,19 @@ const AdminDashboard = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Registered</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {users.map((user) => (
                       <TableRow key={user._id}>
-                        <TableCell className="font-medium">{user.email}</TableCell>
+                        <TableCell className="font-medium">{user.fullName || 'N/A'}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
                         <TableCell>
                           <Badge 
                             variant="secondary"
@@ -286,29 +353,32 @@ const AdminDashboard = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <select
+                          <div className="flex gap-2 justify-end">
+                            <Select
                               value={user.role}
-                              onChange={(e) => handleUpdateRole(user._id, e.target.value as 'user' | 'vet' | 'admin')}
+                              onValueChange={(value) => handleUpdateRole(user._id, value as 'user' | 'vet' | 'admin')}
                               disabled={processingUserId === user._id}
-                              className="text-sm border rounded px-2 py-1 disabled:opacity-50"
                             >
-                              <option value="user">User</option>
-                              <option value="vet">Vet</option>
-                              <option value="admin">Admin</option>
-                            </select>
+                              <SelectTrigger className="w-[110px] h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="user">User</SelectItem>
+                                <SelectItem value="vet">Vet</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                              </SelectContent>
+                            </Select>
                             <Button 
                               size="sm" 
                               variant={user.isBanned ? "outline" : "secondary"}
-                              onClick={() => handleToggleBan(user._id, user.isBanned)}
+                              onClick={() => handleToggleBan(user._id, user.isBanned || false)}
                               disabled={processingUserId === user._id}
+                              title={user.isBanned ? "Unban user" : "Ban user"}
                             >
                               {processingUserId === user._id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : user.isBanned ? (
-                                "Unban"
                               ) : (
-                                "Ban"
+                                <Ban className="h-4 w-4" />
                               )}
                             </Button>
                             <Button 
@@ -316,11 +386,12 @@ const AdminDashboard = () => {
                               variant="destructive"
                               onClick={() => handleDeleteUser(user._id)}
                               disabled={processingUserId === user._id}
+                              title="Delete user permanently"
                             >
                               {processingUserId === user._id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
-                                "Delete"
+                                <Trash2 className="h-4 w-4" />
                               )}
                             </Button>
                           </div>
@@ -332,148 +403,98 @@ const AdminDashboard = () => {
               ) : (
                 <p className="text-center text-muted-foreground py-8">No users found</p>
               )}
+
+              {/* Pagination */}
+              {!isLoadingUsers && users.length > 0 && (
+                <div className="flex items-center justify-between mt-6">
+                  <p className="text-sm text-muted-foreground">
+                    Page {currentPage} of {totalPages}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Usage Statistics
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span>Symptom Checker Uses</span>
-                  <span className="font-bold">2,847</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Vet Searches</span>
-                  <span className="font-bold">1,234</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Pet Records Created</span>
-                  <span className="font-bold">892</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Appointments Booked</span>
-                  <span className="font-bold">445</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  Growth Metrics
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>User Growth</span>
-                    <span className="text-green-600">+12.5%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-green-500 h-2 rounded-full" style={{ width: '75%' }}></div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Feature Usage</span>
-                    <span className="text-blue-600">+8.3%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-500 h-2 rounded-full" style={{ width: '65%' }}></div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Retention Rate</span>
-                    <span className="text-purple-600">89.2%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-purple-500 h-2 rounded-full" style={{ width: '89%' }}></div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Peak Hours
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-pink-600">2-4 PM</div>
-                  <div className="text-sm text-muted-foreground">Highest Activity</div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Morning (6-12)</span>
-                    <span>245 users</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Afternoon (12-6)</span>
-                    <span>467 users</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Evening (6-12)</span>
-                    <span>312 users</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Night (12-6)</span>
-                    <span>89 users</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
           <Card>
             <CardHeader>
-              <CardTitle>Recent Activity Feed</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Platform Overview
+              </CardTitle>
+              <CardDescription>
+                Real-time statistics from the database
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">New user registration</p>
-                  <p className="text-xs text-muted-foreground">sarah.jones@email.com joined the platform</p>
-                  <p className="text-xs text-muted-foreground">2 minutes ago</p>
+            <CardContent>
+              {isLoadingStats ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
                 </div>
-              </div>
-              <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Appointment booked</p>
-                  <p className="text-xs text-muted-foreground">mike.wilson@gmail.com scheduled appointment for Buddy</p>
-                  <p className="text-xs text-muted-foreground">5 minutes ago</p>
+              ) : stats ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground">User Statistics</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm">Total Users</span>
+                        <span className="font-bold text-lg">{stats.totalUsers}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm">Active Users (30 days)</span>
+                        <span className="font-bold text-lg">{stats.activeUsers || 0}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm">New Users (Last 7 Days)</span>
+                        <span className="font-bold text-lg">{typeof stats.recentUsers === 'number' ? stats.recentUsers : 0}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground">Platform Statistics</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm">Total Vets</span>
+                        <span className="font-bold text-lg">{stats.totalVets}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm">Total Pets</span>
+                        <span className="font-bold text-lg">{stats.totalPets}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm">Total Appointments</span>
+                        <span className="font-bold text-lg">{stats.totalAppointments}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Symptom check completed</p>
-                  <p className="text-xs text-muted-foreground">Guest user analyzed symptoms for digestive issues</p>
-                  <p className="text-xs text-muted-foreground">8 minutes ago</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Pet profile updated</p>
-                  <p className="text-xs text-muted-foreground">pet.lover@test.com updated Luna's vaccination records</p>
-                  <p className="text-xs text-muted-foreground">12 minutes ago</p>
-                </div>
-              </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">
+                  No analytics data available
+                </p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -482,64 +503,76 @@ const AdminDashboard = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
-                System Alerts
+                <Database className="h-5 w-5" />
+                System Information
               </CardTitle>
+              <CardDescription>
+                Platform status and information
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-center text-muted-foreground py-8">
-                No active system alerts
-              </p>
+            <CardContent>
+              {isLoadingStats ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              ) : stats ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-sm text-muted-foreground">Database Statistics</h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+                          <span className="text-sm">Total Users</span>
+                          <span className="font-semibold">{stats.totalUsers}</span>
+                        </div>
+                        <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+                          <span className="text-sm">Total Vets</span>
+                          <span className="font-semibold">{stats.totalVets}</span>
+                        </div>
+                        <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+                          <span className="text-sm">Total Pets</span>
+                          <span className="font-semibold">{stats.totalPets}</span>
+                        </div>
+                        <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+                          <span className="text-sm">Total Appointments</span>
+                          <span className="font-semibold">{stats.totalAppointments}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-sm text-muted-foreground">System Status</h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+                          <span className="text-sm">API Status</span>
+                          <Badge className="bg-green-100 text-green-800">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Online
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+                          <span className="text-sm">Database</span>
+                          <Badge className="bg-green-100 text-green-800">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Connected
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+                          <span className="text-sm">Pending Appointments</span>
+                          <span className="font-semibold">{stats.pendingAppointments || 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">
+                  No system data available
+                </p>
+              )}
             </CardContent>
           </Card>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="h-5 w-5" />
-                  Database Status
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span>Connection Status</span>
-                  <Badge className="bg-green-100 text-green-800">Healthy</Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span>Storage Usage</span>
-                  <span>68% (3.2GB)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Last Backup</span>
-                  <span>2 hours ago</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  System Logs
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="p-2 bg-gray-50 rounded text-xs font-mono">
-                  [INFO] User login: admin@happytails.com
-                </div>
-                <div className="p-2 bg-gray-50 rounded text-xs font-mono">
-                  [INFO] Appointment booked: #A1234
-                </div>
-                <div className="p-2 bg-gray-50 rounded text-xs font-mono">
-                  [INFO] Symptom checker used: Guest user
-                </div>
-                <Button variant="outline" size="sm" className="mt-2">
-                  View Full Logs
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
@@ -547,50 +580,27 @@ const AdminDashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
-                System Configuration
+                Quick Actions
               </CardTitle>
+              <CardDescription>
+                Common administrative tasks
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h3 className="font-semibold">User Management</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span>Auto-approve new users</span>
-                      <Button size="sm" variant="outline">Enabled</Button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Require email verification</span>
-                      <Button size="sm" variant="outline">Enabled</Button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Guest usage limit</span>
-                      <Button size="sm" variant="outline">2 uses</Button>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <h3 className="font-semibold">System Features</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span>Symptom checker AI</span>
-                      <Button size="sm" variant="outline">Active</Button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Appointment booking</span>
-                      <Button size="sm" variant="outline">Active</Button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Maintenance mode</span>
-                      <Button size="sm" variant="outline">Disabled</Button>
-                    </div>
-                  </div>
-                </div>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button onClick={() => loadStats()} variant="outline" className="justify-start">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh Statistics
+                </Button>
+                <Button onClick={() => loadUsers()} variant="outline" className="justify-start">
+                  <Users className="h-4 w-4 mr-2" />
+                  Reload User List
+                </Button>
               </div>
-              
-              <div className="pt-6 border-t">
-                <Button className="bg-pink-500 hover:bg-pink-600">Save Settings</Button>
+              <div className="pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  For advanced settings and system configuration, please contact the system administrator.
+                </p>
               </div>
             </CardContent>
           </Card>

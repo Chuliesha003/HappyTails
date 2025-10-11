@@ -57,35 +57,29 @@ exports.getStats = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: {
-        overview: {
-          totalUsers,
-          totalPets,
-          totalVets,
-          totalAppointments,
-          totalArticles,
-          activeUsers,
-          pendingAppointments,
-          publishedArticles,
-        },
-        recentActivity: {
-          newUsersLast7Days: recentUsers,
-          newAppointmentsLast7Days: recentAppointments,
-        },
-        breakdown: {
-          usersByRole: usersByRole.reduce((acc, curr) => {
-            acc[curr._id] = curr.count;
-            return acc;
-          }, {}),
-          appointmentsByStatus: appointmentsByStatus.reduce((acc, curr) => {
-            acc[curr._id] = curr.count;
-            return acc;
-          }, {}),
-          articlesByCategory: articlesByCategory.reduce((acc, curr) => {
-            acc[curr._id] = curr.count;
-            return acc;
-          }, {}),
-        },
+      stats: {
+        totalUsers,
+        totalPets,
+        totalVets,
+        totalAppointments,
+        totalArticles,
+        activeUsers,
+        pendingAppointments,
+        publishedArticles,
+        recentUsers,
+        recentAppointments,
+        usersByRole: usersByRole.reduce((acc, curr) => {
+          acc[curr._id] = curr.count;
+          return acc;
+        }, {}),
+        appointmentsByStatus: appointmentsByStatus.reduce((acc, curr) => {
+          acc[curr._id] = curr.count;
+          return acc;
+        }, {}),
+        articlesByCategory: articlesByCategory.reduce((acc, curr) => {
+          acc[curr._id] = curr.count;
+          return acc;
+        }, {}),
       },
     });
   } catch (error) {
@@ -132,7 +126,10 @@ exports.getAllUsers = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: users,
+      users: users,
+      total: total,
+      page: parseInt(page),
+      limit: parseInt(limit),
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -171,7 +168,7 @@ exports.getUserById = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: {
+      user: {
         ...user.toObject(),
         appointmentsCount,
       },
@@ -222,7 +219,7 @@ exports.updateUserRole = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'User role updated successfully',
-      data: user.toSafeObject(),
+      user: user.toObject ? user.toObject() : user,
     });
   } catch (error) {
     console.error('Update user role error:', error);
@@ -262,7 +259,7 @@ exports.toggleUserStatus = async (req, res) => {
     res.status(200).json({
       success: true,
       message: `User ${user.isActive ? 'activated' : 'deactivated'} successfully`,
-      data: user.toSafeObject(),
+      user: user.toObject ? user.toObject() : user,
     });
   } catch (error) {
     console.error('Toggle user status error:', error);
@@ -313,6 +310,47 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to delete user',
+      error: error.message,
+    });
+  }
+};
+
+// Ban/Unban user
+exports.toggleUserBan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { banned } = req.body;
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Prevent admin from banning themselves
+    if (user._id.toString() === req.userDoc._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You cannot ban your own account',
+      });
+    }
+
+    user.isBanned = banned;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `User ${banned ? 'banned' : 'unbanned'} successfully`,
+      user: user.toObject ? user.toObject() : user,
+    });
+  } catch (error) {
+    console.error('Toggle user ban error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to toggle user ban status',
       error: error.message,
     });
   }

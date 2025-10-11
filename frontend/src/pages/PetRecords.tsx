@@ -87,12 +87,20 @@ const PetRecords = () => {
       allergies: ""
     });
     setEditingPetId(null);
+    setError(null); // Clear any error messages
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const requiredOk = !!(formData.name && formData.breed && formData.age && formData.weight && formData.gender);
-    if (!requiredOk) return;
+    const requiredOk = !!(formData.name && formData.species && formData.breed && formData.age && formData.weight && formData.gender);
+    if (!requiredOk) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -130,11 +138,18 @@ const PetRecords = () => {
       resetForm();
     } catch (err) {
       console.error('Failed to save pet:', err);
-      const errorMessage = editingPetId ? 'Failed to update pet.' : 'Failed to add pet.';
+      const action = editingPetId ? 'update' : 'add';
+      
+      // Extract error message from API error
+      let errorMessage = `Failed to ${action} pet.`;
+      if (err && typeof err === 'object' && 'message' in err) {
+        errorMessage = (err as { message: string }).message;
+      }
+      
       setError(errorMessage);
       toast({
         title: "Error",
-        description: errorMessage + ' Please try again.',
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -241,14 +256,25 @@ const PetRecords = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="species">Species</Label>
-                <Input
+                <Label htmlFor="species">Species *</Label>
+                <select
                   id="species"
-                  type="text"
-                  placeholder="e.g., Dog, Cat, Bird"
                   value={formData.species}
                   onChange={(e) => handleInputChange("species", e.target.value)}
-                />
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  required
+                >
+                  <option value="">Select Species</option>
+                  <option value="Dog">Dog</option>
+                  <option value="Cat">Cat</option>
+                  <option value="Bird">Bird</option>
+                  <option value="Rabbit">Rabbit</option>
+                  <option value="Hamster">Hamster</option>
+                  <option value="Guinea Pig">Guinea Pig</option>
+                  <option value="Fish">Fish</option>
+                  <option value="Reptile">Reptile</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
               
               <div className="space-y-2">

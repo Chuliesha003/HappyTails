@@ -183,9 +183,15 @@ export interface AdminStats {
   totalPets: number;
   totalVets: number;
   totalAppointments: number;
+  totalArticles?: number;
+  activeUsers?: number;
   pendingAppointments: number;
-  recentUsers: User[];
-  recentAppointments: Appointment[];
+  publishedArticles?: number;
+  recentUsers?: number;
+  recentAppointments?: number;
+  usersByRole?: Record<string, number>;
+  appointmentsByStatus?: Record<string, number>;
+  articlesByCategory?: Record<string, number>;
 }
 
 export interface UserListResponse {
@@ -193,6 +199,12 @@ export interface UserListResponse {
   total: number;
   page: number;
   limit: number;
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    totalUsers: number;
+    hasMore: boolean;
+  };
 }
 
 // Pagination Types
