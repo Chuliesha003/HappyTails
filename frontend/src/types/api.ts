@@ -160,7 +160,9 @@ export interface Article {
   content: string;
   category: 'nutrition' | 'training' | 'health' | 'general';
   author?: string;
+  authorName?: string;
   imageUrl?: string;
+  images?: string[];
   tags?: string[];
   published: boolean;
   createdAt?: string;
