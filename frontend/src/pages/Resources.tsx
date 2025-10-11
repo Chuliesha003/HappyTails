@@ -129,8 +129,8 @@ const Resources = () => {
       </Helmet>
 
       <header className="space-y-2 text-center">
-        <h1 className="text-3xl font-bold">Learning Resources</h1>
-        <p className="text-muted-foreground">Friendly, vetted content to keep your companions healthy and happy.</p>
+        <h1 className="text-4xl font-bold text-gray-900">Pet Care Articles</h1>
+        <p className="text-gray-600">Comprehensive resources for pet health and wellness.</p>
         {isAdmin() && (
           <div className="flex justify-center mt-4">
             <ArticleForm onSuccess={loadArticles} />
@@ -202,50 +202,36 @@ const Resources = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {filteredArticles.map((article) => (
-              <Card key={article.id} className="flex flex-col hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <Badge className="capitalize">{article.category}</Badge>
+              <article key={article.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+                {(article.images && article.images.length > 0) || article.imageUrl ? (
+                  <div className="w-full h-48 overflow-hidden">
+                    <img src={article.images && article.images.length > 0 ? article.images[0] : article.imageUrl} alt={article.title} className="w-full h-full object-cover" />
+                  </div>
+                ) : null}
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{article.category}</span>
                     {article.published && (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                         Published
-                      </Badge>
+                      </span>
                     )}
                   </div>
-                  <CardTitle className="text-lg line-clamp-2">{article.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1 flex flex-col">
-                  {(article.images && article.images.length > 0) || article.imageUrl ? (
-                    <div className="w-full h-40 mb-3 overflow-hidden rounded-md">
-                      <img src={article.images && article.images.length > 0 ? article.images[0] : article.imageUrl} alt={article.title} className="w-full h-full object-cover" />
-                    </div>
-                  ) : null}
-
-                  <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">{article.title}</h2>
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-3">
                     {article.content.substring(0, 220)}...
                   </p>
-                  
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4 mt-auto">
-                    <div className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      <span>{article.authorName || article.author}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      <span>{formatDate(article.createdAt)}</span>
-                    </div>
+                  <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
+                    <span>By {article.authorName || article.author}</span>
+                    <span>{formatDate(article.createdAt)}</span>
                   </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
+                  <button
+                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium py-2 px-4 rounded-md transition-colors duration-200"
                     onClick={async () => {
                       try {
                         setIsArticleModalOpen(true);
-                        // fetch full article (images, full content)
                         const full = await resourcesService.getArticleById(article.id);
                         setOpenArticle(full);
                       } catch (err) {
@@ -255,46 +241,35 @@ const Resources = () => {
                       }
                     }}
                   >
-                    <BookOpen className="h-4 w-4 mr-2" />
-                    Read More
-                  </Button>
-
+                    Read Full Article
+                  </button>
                   {isAdmin() && (
                     <div className="flex gap-2 mt-3">
                       <ArticleForm
                         article={article}
                         onSuccess={loadArticles}
                         trigger={
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
+                          <button className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-1 px-3 rounded text-sm transition-colors">
                             Edit
-                          </Button>
+                          </button>
                         }
                       />
-                      <Button
-                        variant="outline"
-                        size="sm"
+                      <button
+                        className={`flex-1 font-medium py-1 px-3 rounded text-sm transition-colors ${article.published ? "bg-orange-50 hover:bg-orange-100 text-orange-700" : "bg-green-50 hover:bg-green-100 text-green-700"}`}
                         onClick={() => handleTogglePublish(article.id, article.published)}
-                        className={article.published ? "text-orange-600" : "text-green-600"}
                       >
-                        {article.published ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
+                        {article.published ? 'Unpublish' : 'Publish'}
+                      </button>
+                      <button
+                        className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 font-medium py-1 px-3 rounded text-sm transition-colors"
                         onClick={() => handleDeleteArticle(article.id)}
-                        className="text-red-600 hover:text-red-700"
                       >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                        Delete
+                      </button>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </article>
             ))}
           </div>
         )}
