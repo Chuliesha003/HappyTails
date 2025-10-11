@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { 
   signInWithEmailAndPassword, 
@@ -201,10 +202,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       console.log('Registration successful!');
       return true;
-    } catch (error: any) {
-      console.error('Registration error:', error);
-      console.error('Error code:', error?.code);
-      console.error('Error message:', error?.message);
+    } catch (error: unknown) {
+      const err = error as { code?: string; message?: string };
+      console.error('Registration error:', err);
+      console.error('Error code:', err?.code);
+      console.error('Error message:', err?.message);
       setIsLoading(false);
       return false;
     }
@@ -250,10 +252,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       console.log('Google Sign-In completed successfully!');
       return true;
-    } catch (error: any) {
-      console.error('Google Sign-In error:', error);
-      console.error('Error code:', error?.code);
-      console.error('Error message:', error?.message);
+    } catch (error: unknown) {
+      const err = error as { code?: string; message?: string };
+      console.error('Google Sign-In error:', err);
+      console.error('Error code:', err?.code);
+      console.error('Error message:', err?.message);
       setIsLoading(false);
       return false;
     }
