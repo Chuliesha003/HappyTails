@@ -51,6 +51,12 @@ const articleSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+      images: [
+        {
+          type: String,
+          trim: true,
+        },
+      ],
     readTime: {
       type: Number, // In minutes
       min: [1, 'Read time must be at least 1 minute'],
@@ -171,6 +177,7 @@ articleSchema.methods.toSafeObject = function () {
     publishedAt: this.publishedAt,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt,
+      images: this.images || [],
   };
 };
 
