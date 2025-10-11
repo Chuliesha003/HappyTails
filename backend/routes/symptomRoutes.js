@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const symptomController = require('../controllers/symptomController');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const { optionalAuth } = require('../middleware/auth');
 const { aiLimiter } = require('../middleware/security');
 
@@ -73,7 +75,8 @@ const { aiLimiter } = require('../middleware/security');
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/analyze', aiLimiter, optionalAuth, symptomController.checkSymptoms);
+// Accept both JSON and multipart for image+text analysis
+router.post('/analyze', aiLimiter, optionalAuth, upload.single('photo'), symptomController.checkSymptoms);
 
 /**
  * @route   POST /api/symptom-checker/advice

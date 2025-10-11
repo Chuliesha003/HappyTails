@@ -3,6 +3,7 @@ const config = require('../config/config');
 
 let genAI;
 let model;
+let visionModel;
 
 /**
  * Initialize Gemini AI
@@ -15,7 +16,8 @@ const initializeGemini = () => {
     }
 
     genAI = new GoogleGenerativeAI(config.gemini.apiKey);
-    model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+  model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+  visionModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     console.log('✅ Gemini AI initialized successfully');
     return model;
@@ -32,15 +34,15 @@ const initializeGemini = () => {
  */
 const analyzeSymptoms = async (symptomData) => {
   try {
-    if (!model) {
+    if (!model || !visionModel) {
       initializeGemini();
     }
 
-    if (!model) {
+    if (!model || !visionModel) {
       throw new Error('Gemini AI is not initialized. Please check your API key.');
     }
 
-    const { petType, symptoms, duration, severity, additionalInfo } = symptomData;
+    const { petType, symptoms, duration, severity, additionalInfo, imageBase64, imageMimeType } = symptomData;
 
     // Construct detailed prompt for veterinary symptom analysis
     const prompt = `
@@ -66,7 +68,21 @@ Important: Always emphasize that this is educational information only and not a 
 Format your response in a clear, structured manner with bullet points.
 `;
 
-    const result = await model.generateContent(prompt);
+    let result;
+    if (imageBase64 && imageMimeType) {
+      // Use vision model with image + text
+      result = await visionModel.generateContent([
+        { text: prompt },
+        {
+          inlineData: {
+            data: imageBase64,
+            mimeType: imageMimeType,
+          },
+        },
+      ]);
+    } else {
+      result = await model.generateContent(prompt);
+    }
     const response = await result.response;
     const analysisText = response.text();
 

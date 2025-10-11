@@ -8,7 +8,7 @@ const Pet = require('../models/Pet');
  */
 const checkSymptoms = async (req, res) => {
   try {
-    const { petType, symptoms, duration, severity, additionalInfo, petId, imageUrl, guestSession } = req.body;
+  const { petType, symptoms, duration, severity, additionalInfo, petId, imageUrl, guestSession } = req.body;
 
     // Validate required fields
     if (!petType || !symptoms) {
@@ -40,13 +40,23 @@ const checkSymptoms = async (req, res) => {
       }
     }
 
-    // Analyze symptoms using Gemini AI
+    // Prepare image if uploaded via multipart
+    let imageBase64 = null;
+    let imageMimeType = null;
+    if (req.file && req.file.buffer) {
+      imageBase64 = req.file.buffer.toString('base64');
+      imageMimeType = req.file.mimetype || 'image/jpeg';
+    }
+
+    // Analyze symptoms using Gemini AI (with optional image)
     const analysis = await analyzeSymptoms({
       petType,
       symptoms,
       duration,
       severity,
       additionalInfo,
+      imageBase64,
+      imageMimeType,
     });
 
     // Save symptom check to database
@@ -85,10 +95,39 @@ const checkSymptoms = async (req, res) => {
     const symptomCheck = new SymptomCheck(symptomCheckData);
     await symptomCheck.save();
 
+    // Attempt to shape a structured response by heuristics from raw text
+    const parseConditions = (text) => {
+      const lines = text.split(/\n+/).map(l => l.trim()).filter(Boolean);
+      const conditions = [];
+      let current = null;
+      for (const l of lines) {
+        if (/^\d+\.|\u2022/.test(l) || (l.length < 60 && /^[A-Za-z].*/.test(l))) {
+          if (current) conditions.push(current);
+          current = { name: l.replace(/^\d+\.\s*/, ''), urgency: 'moderate', description: '', firstAidTips: [], recommendations: [] };
+        } else if (/immediate care|first aid/i.test(l)) {
+          if (current) current.firstAidTips.push(l);
+        } else if (/prevent|prevention|recommend/i.test(l)) {
+          if (current) current.recommendations.push(l);
+        } else {
+          if (current) current.description += (current.description ? ' ' : '') + l;
+        }
+      }
+      if (current) conditions.push(current);
+      return conditions.slice(0, 5);
+    };
+
+    const conditions = parseConditions(analysis.rawAnalysis || '');
+    const overallUrgency = (/emergency/i.test(analysis.rawAnalysis) ? 'high' : /high/i.test(analysis.rawAnalysis) ? 'high' : /moderate/i.test(analysis.rawAnalysis) ? 'moderate' : 'low');
+
     res.status(200).json({
       success: true,
+      data: {
+        conditions,
+        overallUrgency,
+        disclaimerShown: true,
+      },
       analysis,
-      symptomCheckId: symptomCheck._id, // Return ID so frontend can link to appointment
+      symptomCheckId: symptomCheck._id,
       recommendations: {
         findVet: '/api/vets',
         bookAppointment: '/api/appointments',
