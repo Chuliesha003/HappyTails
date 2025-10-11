@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PawPrint } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { FcGoogle } from "react-icons/fc";
 
 const GetStarted = () => {
   const [fullName, setFullName] = useState("");
@@ -16,7 +17,7 @@ const GetStarted = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   
-  const { register, isLoading } = useAuth();
+  const { register, signInWithGoogle, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -55,6 +56,16 @@ const GetStarted = () => {
       navigate(from, { replace: true });
     } else {
       setError("Registration failed. Please try again.");
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError("");
+    const success = await signInWithGoogle();
+    if (success) {
+      navigate('/user-dashboard', { replace: true });
+    } else {
+      setError("Google Sign-In failed. Please try again.");
     }
   };
 
@@ -150,6 +161,28 @@ const GetStarted = () => {
               {isLoading ? "Creating Account..." : "Create Account"}
             </Button>
           </form>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-2 text-muted-foreground">Or sign up with</span>
+            </div>
+          </div>
+
+          {/* Google Sign-In Button */}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
+          >
+            <FcGoogle className="mr-2 h-5 w-5" />
+            Sign up with Google
+          </Button>
           
           {error && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">

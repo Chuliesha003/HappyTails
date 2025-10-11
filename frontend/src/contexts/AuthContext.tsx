@@ -4,6 +4,8 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  signInWithPopup,
+  GoogleAuthProvider,
   User as FirebaseUser
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -33,6 +35,7 @@ export interface AuthState {
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   register: (userData: RegisterData) => Promise<boolean>;
+  signInWithGoogle: () => Promise<boolean>;
   logout: () => Promise<void>;
   incrementGuestUsage: () => void;
   canUseSymptomChecker: () => boolean;
@@ -203,6 +206,50 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const signInWithGoogle = async (): Promise<boolean> => {
+    setIsLoading(true);
+    
+    try {
+      console.log('Starting Google Sign-In...');
+      
+      // Create Google Auth Provider
+      const provider = new GoogleAuthProvider();
+      
+      // Sign in with popup
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      console.log('Google Sign-In successful:', user.uid);
+      
+      // Get Firebase ID token
+      const idToken = await user.getIdToken();
+      
+      // Register/Login with backend
+      const response = await authService.registerOrLogin({
+        idToken: idToken,
+        fullName: user.displayName || 'Google User',
+      });
+      
+      console.log('Backend response:', response);
+      
+      // Set user state
+      setUser(convertApiUser(response.user));
+      
+      // Clear guest usage
+      setGuestUsageCount(0);
+      sessionStorage.removeItem(STORAGE_KEYS.GUEST_USAGE);
+      
+      console.log('Google Sign-In completed successfully!');
+      return true;
+    } catch (error: any) {
+      console.error('Google Sign-In error:', error);
+      console.error('Error code:', error?.code);
+      console.error('Error message:', error?.message);
+      setIsLoading(false);
+      return false;
+    }
+  };
+
   const logout = async (): Promise<void> => {
     try {
       // Sign out from Firebase
@@ -252,6 +299,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     maxGuestUsage,
     login,
     register,
+    signInWithGoogle,
     logout,
     incrementGuestUsage,
     canUseSymptomChecker,
