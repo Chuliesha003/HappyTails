@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node kill-port.js 8080 && vite",
+    "dev:force": "node kill-port.js 8080 && node kill-port.js 8086 && vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
