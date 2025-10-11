@@ -11,6 +11,7 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { vetsService } from "@/services/vets";
 import type { Vet } from "@/types/api";
+import LeafletMap from "@/components/LeafletMap";
 
 const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
   const R = 6371; // Earth's radius in km
@@ -127,12 +128,19 @@ const Vets = () => {
 
   const filtered = useMemo(() => {
     if (!searchTerm) return vets;
-    return vets.filter(vet => 
-      vet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vet.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vet.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (vet.specialization && vet.specialization.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    return vets.filter(vet => {
+      const vetLocation = vet.location as any;
+      const address = vetLocation?.address || vet.address || '';
+      const city = vetLocation?.city || vet.city || '';
+      const specialization = Array.isArray(vet.specialization) 
+        ? vet.specialization.join(' ') 
+        : vet.specialization || '';
+      
+      return vet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        specialization.toLowerCase().includes(searchTerm.toLowerCase());
+    });
   }, [vets, searchTerm]);
 
   const onBook = (vetId?: string, vetName?: string) => { 
@@ -171,16 +179,12 @@ const Vets = () => {
             <div className="order-1 lg:order-none lg:w-1/2 min-w-0 lg:sticky lg:top-24 self-start">
               <Card className="h-full shadow-sm border border-purple-100">
                 <CardContent className="p-0">
-                  <div className="relative w-full overflow-hidden rounded-xl">
-                    <iframe
-                      title="Map showing your location and nearby veterinary clinics"
-                      src={userLocation
-                        ? `https://www.google.com/maps?q=veterinary+clinic&center=${userLocation.lat},${userLocation.lng}&zoom=14&output=embed`
-                        : "https://www.google.com/maps?q=veterinary+clinic+colombo&center=6.9271,79.8612&zoom=14&output=embed"}
-                      className="h-[560px] lg:h-[620px] w-full border-0"
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                      sandbox="allow-scripts allow-same-origin"
+                  <div className="relative w-full overflow-hidden rounded-xl h-[620px]">
+                    {/* Leaflet map showing ONLY our vet data from database - NO API KEY NEEDED */}
+                    <LeafletMap 
+                      vets={filtered}
+                      userLocation={userLocation || undefined}
+                      onVetClick={(vet) => setSelected(vet)}
                     />
                   </div>
                 </CardContent>
@@ -224,56 +228,69 @@ const Vets = () => {
                     </CardContent>
                   </Card>
                 ) : (
-                  filtered.map((vet) => (
-                    <Card 
-                      key={vet.id} 
-                      className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:border-pink-300 shadow-sm border border-pink-100 rounded-lg bg-white"
-                      onClick={() => setSelected(vet)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="mb-3">
-                          <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-bold text-gray-900">{vet.name}</h3>
-                            {vet.verified && (
-                              <Badge className="bg-green-100 text-green-700 hover:bg-green-200">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Verified
-                              </Badge>
+                  filtered.map((vet) => {
+                    const vetLocation = vet.location as any;
+                    const address = vetLocation?.address || vet.address || '';
+                    const city = vetLocation?.city || vet.city || '';
+                    const state = vetLocation?.state || vet.state || '';
+                    const zipCode = vetLocation?.zipCode || vet.zipCode || '';
+                    const specialization = Array.isArray(vet.specialization) 
+                      ? vet.specialization.join(', ') 
+                      : vet.specialization || '';
+                    const experience = (vet as any).yearsOfExperience || vet.experience;
+                    const verified = (vet as any).isVerified || vet.verified;
+                    
+                    return (
+                      <Card 
+                        key={vet.id} 
+                        className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:border-pink-300 shadow-sm border border-pink-100 rounded-lg bg-white"
+                        onClick={() => setSelected(vet)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="mb-3">
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-lg font-bold text-gray-900">{vet.name}</h3>
+                              {verified && (
+                                <Badge className="bg-green-100 text-green-700 hover:bg-green-200">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Verified
+                                </Badge>
+                              )}
+                            </div>
+                            {specialization && (
+                              <p className="text-sm text-gray-600 mt-1">{specialization}</p>
+                            )}
+                            {experience && (
+                              <p className="text-xs text-gray-500 mt-1">{experience} years experience</p>
                             )}
                           </div>
-                          {vet.specialization && (
-                            <p className="text-sm text-gray-600 mt-1">{vet.specialization}</p>
-                          )}
-                          {vet.experience && (
-                            <p className="text-xs text-gray-500 mt-1">{vet.experience} years experience</p>
-                          )}
-                        </div>
-                        
-                        <div className="space-y-2 mb-3">
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <MapPin className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                            <span className="text-sm">{vet.address}, {vet.city}, {vet.state} {vet.zipCode}</span>
+                          
+                          <div className="space-y-2 mb-3">
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <MapPin className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                              <span className="text-sm">{address}, {city}{state ? `, ${state}` : ''} {zipCode}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <Phone className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                              <span className="text-sm">{vet.phoneNumber}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <Phone className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                            <span className="text-sm">{vet.phoneNumber}</span>
-                          </div>
-                        </div>
 
-                        <div className="flex justify-end">
-                          <Button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onBook(vet.id, vet.name);
-                            }}
-                            className="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-full font-medium shadow-md transition-all duration-200 hover:shadow-lg text-sm"
-                          >
-                            Book Appointment
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                          <div className="flex justify-end">
+                            <Button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onBook(vet.id, vet.name);
+                              }}
+                              className="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-full font-medium shadow-md transition-all duration-200 hover:shadow-lg text-sm"
+                            >
+                              Book Appointment
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -281,81 +298,94 @@ const Vets = () => {
           </div>
 
           {/* Selected Vet Modal */}
-          {selected && (
-            <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    {selected.name}
-                    {selected.verified && (
-                      <Badge className="bg-green-100 text-green-700">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Verified
-                      </Badge>
+          {selected && (() => {
+            const vetLocation = selected.location as any;
+            const address = vetLocation?.address || selected.address || '';
+            const city = vetLocation?.city || selected.city || '';
+            const state = vetLocation?.state || selected.state || '';
+            const zipCode = vetLocation?.zipCode || selected.zipCode || '';
+            const specialization = Array.isArray(selected.specialization) 
+              ? selected.specialization.join(', ') 
+              : selected.specialization || '';
+            const experience = (selected as any).yearsOfExperience || selected.experience;
+            const verified = (selected as any).isVerified || selected.verified;
+            
+            return (
+              <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      {selected.name}
+                      {verified && (
+                        <Badge className="bg-green-100 text-green-700">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Verified
+                        </Badge>
+                      )}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4">
+                    {specialization && (
+                      <div>
+                        <h4 className="font-semibold text-sm text-gray-700 mb-1">Specialization</h4>
+                        <p className="text-sm text-gray-600">{specialization}</p>
+                      </div>
                     )}
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4">
-                  {selected.specialization && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-700 mb-1">Specialization</h4>
-                      <p className="text-sm text-gray-600">{selected.specialization}</p>
+                    
+                    {experience && (
+                      <div>
+                        <h4 className="font-semibold text-sm text-gray-700 mb-1">Experience</h4>
+                        <p className="text-sm text-gray-600">{experience} years</p>
+                      </div>
+                    )}
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2 text-sm text-gray-600">
+                        <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <span>{address}, {city}{state ? `, ${state}` : ''} {zipCode}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Phone className="h-4 w-4 flex-shrink-0" />
+                        <span>{selected.phoneNumber}</span>
+                      </div>
                     </div>
-                  )}
-                  
-                  {selected.experience && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-700 mb-1">Experience</h4>
-                      <p className="text-sm text-gray-600">{selected.experience} years</p>
-                    </div>
-                  )}
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-start gap-2 text-sm text-gray-600">
-                      <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                      <span>{selected.address}, {selected.city}, {selected.state} {selected.zipCode}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Phone className="h-4 w-4 flex-shrink-0" />
-                      <span>{selected.phoneNumber}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    <Button 
-                      size="sm" 
-                      onClick={() => window.open(`tel:${selected.phoneNumber}`, '_self')}
-                      className="bg-green-500 hover:bg-green-600 text-white"
-                    >
-                      <Phone className="w-4 h-4 mr-2" />
-                      Call Now
-                    </Button>
-                    {selected.location && (
+                    
+                    <div className="flex flex-wrap gap-2">
+                      <Button 
+                        size="sm" 
+                        onClick={() => window.open(`tel:${selected.phoneNumber}`, '_self')}
+                        className="bg-green-500 hover:bg-green-600 text-white"
+                      >
+                        <Phone className="w-4 h-4 mr-2" />
+                        Call Now
+                      </Button>
+                      {selected.location && selected.location.coordinates && (
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const [lng, lat] = selected.location!.coordinates;
+                            const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+                            window.open(url, '_blank');
+                          }}
+                        >
+                          <Navigation className="w-4 h-4 mr-2" />
+                          Get Directions
+                        </Button>
+                      )}
                       <Button 
                         size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          const [lng, lat] = selected.location!.coordinates;
-                          const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-                          window.open(url, '_blank');
-                        }}
+                        onClick={() => onBook(selected.id, selected.name)}
+                        className="bg-purple-600 hover:bg-purple-700"
                       >
-                        <Navigation className="w-4 h-4 mr-2" />
-                        Get Directions
+                        Book Appointment
                       </Button>
-                    )}
-                    <Button 
-                      size="sm"
-                      onClick={() => onBook(selected.id, selected.name)}
-                      className="bg-purple-600 hover:bg-purple-700"
-                    >
-                      Book Appointment
-                    </Button>
+                    </div>
                   </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
+                </DialogContent>
+              </Dialog>
+            );
+          })()}
         </div>
       </div>
     </>
