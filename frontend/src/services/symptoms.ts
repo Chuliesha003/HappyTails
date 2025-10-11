@@ -8,11 +8,17 @@ export const symptomsService = {
    */
   analyzeSymptoms: async (data: SymptomAnalysisRequest): Promise<SymptomAnalysisResponse> => {
     try {
-      const response = await api.post<SymptomAnalysisResponse>(
+      const response = await api.post<unknown>(
         '/symptom-checker/analyze',
         data
       );
-      return response;
+      // Backend may return { success, data } or direct payload
+      const r = response as Record<string, unknown>;
+      if (r && 'conditions' in r) return r as unknown as SymptomAnalysisResponse;
+      if (r && 'data' in r && r.data && typeof r.data === 'object' && 'conditions' in (r.data as object)) {
+        return r.data as SymptomAnalysisResponse;
+      }
+      return r as unknown as SymptomAnalysisResponse;
     } catch (error) {
       throw handleApiError(error);
     }
@@ -40,11 +46,16 @@ export const symptomsService = {
         formData.append('petAge', petAge.toString());
       }
       
-      const response = await api.upload<SymptomAnalysisResponse>(
+      const response = await api.upload<unknown>(
         '/symptom-checker/analyze',
         formData
       );
-      return response;
+      const r = response as Record<string, unknown>;
+      if (r && 'conditions' in r) return r as unknown as SymptomAnalysisResponse;
+      if (r && 'data' in r && r.data && typeof r.data === 'object' && 'conditions' in (r.data as object)) {
+        return r.data as SymptomAnalysisResponse;
+      }
+      return r as unknown as SymptomAnalysisResponse;
     } catch (error) {
       throw handleApiError(error);
     }
