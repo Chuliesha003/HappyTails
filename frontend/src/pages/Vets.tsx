@@ -129,9 +129,9 @@ const Vets = () => {
   const filtered = useMemo(() => {
     if (!searchTerm) return vets;
     return vets.filter(vet => {
-      const vetLocation = vet.location as any;
-      const address = vetLocation?.address || vet.address || '';
-      const city = vetLocation?.city || vet.city || '';
+      const vetLocation = vet.location;
+      const address = vet.address || '';
+      const city = vet.city || '';
       const specialization = Array.isArray(vet.specialization) 
         ? vet.specialization.join(' ') 
         : vet.specialization || '';
@@ -229,16 +229,15 @@ const Vets = () => {
                   </Card>
                 ) : (
                   filtered.map((vet) => {
-                    const vetLocation = vet.location as any;
-                    const address = vetLocation?.address || vet.address || '';
-                    const city = vetLocation?.city || vet.city || '';
-                    const state = vetLocation?.state || vet.state || '';
-                    const zipCode = vetLocation?.zipCode || vet.zipCode || '';
+                    const address = vet.address || '';
+                    const city = vet.city || '';
+                    const state = vet.state || '';
+                    const zipCode = vet.zipCode || '';
                     const specialization = Array.isArray(vet.specialization) 
                       ? vet.specialization.join(', ') 
                       : vet.specialization || '';
-                    const experience = (vet as any).yearsOfExperience || vet.experience;
-                    const verified = (vet as any).isVerified || vet.verified;
+                    const experience = vet.experience;
+                    const verified = vet.verified;
                     
                     return (
                       <Card 
@@ -299,16 +298,15 @@ const Vets = () => {
 
           {/* Selected Vet Modal */}
           {selected && (() => {
-            const vetLocation = selected.location as any;
-            const address = vetLocation?.address || selected.address || '';
-            const city = vetLocation?.city || selected.city || '';
-            const state = vetLocation?.state || selected.state || '';
-            const zipCode = vetLocation?.zipCode || selected.zipCode || '';
+            const address = selected.address || '';
+            const city = selected.city || '';
+            const state = selected.state || '';
+            const zipCode = selected.zipCode || '';
             const specialization = Array.isArray(selected.specialization) 
               ? selected.specialization.join(', ') 
               : selected.specialization || '';
-            const experience = (selected as any).yearsOfExperience || selected.experience;
-            const verified = (selected as any).isVerified || selected.verified;
+            const experience = selected.experience;
+            const verified = selected.verified;
             
             return (
               <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
