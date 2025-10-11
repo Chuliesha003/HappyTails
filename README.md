@@ -47,107 +47,158 @@ Try different access levels with these credentials:
 
 This project has been organized into a monorepo structure:
 
+# HappyTails
+
+Comprehensive pet health management platform for clinics, pet owners and administrators.
+
+This README is written to be suitable for sharing on GitHub and for presentation to lecturers or evaluators. It covers project goals, architecture, setup, development tips, and how to extend or test the application.
+
+---
+
+## Quick overview
+
+- Purpose: Help pet owners manage pet health records, find veterinarians, run AI-backed symptom checks, and let clinics/admins manage users and content.
+- Audience: Students, instructors, reviewers, maintainers, and contributors.
+
+---
+
+## Key features
+
+- User roles: Guest, Registered User, Vet, Admin
+- Pet records: create, edit, delete, and view pet profiles and medical history
+- Symptom checker: AI-assisted symptom analysis and recommendations
+- Vet finder: search and view nearby verified veterinary clinics
+- Admin dashboard: user, pet, appointment, vet, and content management
+- Responsive UI built with Tailwind CSS and shadcn/ui components
+
+---
+
+## Tech stack
+
+- Frontend: React 18 + TypeScript, Vite
+- Styling: Tailwind CSS, shadcn/ui
+- Backend: Node.js + Express (API controllers and routes in `backend/`)
+- Database: MongoDB (Mongoose models in `backend/models/`)
+- Authentication: Firebase (used for auth) + backend token verification
+- Linting & formatting: ESLint, Prettier
+
+---
+
+## Repo layout (monorepo)
+
 ```
-happytails/
-├── frontend/          # React frontend application
-│   ├── src/
-│   ├── public/
-│   ├── package.json
-│   └── ...
-├── package.json       # Root package.json for monorepo management
-└── README.md
-```
-
-## Quick Start
-
-### Development
-
-From the root directory:
-```bash
-npm run dev
-```
-
-Or run frontend directly:
-```bash
-cd frontend
-npm run dev
-```
-
-### Available Scripts
-
-- `npm run dev` - Start the frontend development server
-- `npm run build` - Build the frontend for production
-- `npm run preview` - Preview the production build
-- `npm run lint` - Run ESLint on the frontend code
-
-## Project info
-
-**URL**: https://lovable.dev/projects/a403ab49-41cd-4789-a04d-12eded82ca20
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/a403ab49-41cd-4789-a04d-12eded82ca20) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+HappyTails/
+├─ frontend/          # React app (src/, public/, package.json)
+├─ backend/           # Express API (controllers/, models/, routes/)
+├─ README.md          # This file
+└─ ...
 ```
 
-**Edit a file directly in GitHub**
+---
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Getting started (developer instructions)
 
-**Use GitHub Codespaces**
+Prerequisites
+- Node.js 18+ and npm (or Yarn)
+- MongoDB running locally or a MongoDB URI
+- Firebase project (for auth) and credentials in `frontend/.env` and `backend/.env` as needed
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Local development (recommended)
 
-## What technologies are used for this project?
+1. Clone the repo
 
-This project is built with:
+	git clone <your-repo-url>
+	cd HappyTails
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+2. Install dependencies
 
-## How can I deploy this project?
+	cd frontend
+	npm install
 
-Simply open [Lovable](https://lovable.dev/projects/a403ab49-41cd-4789-a04d-12eded82ca20) and click on Share -> Publish.
+	cd ../backend
+	npm install
 
-## Can I connect a custom domain to my Lovable project?
+3. Configure environment
 
-Yes, you can!
+	- Copy `frontend/.env.example` → `frontend/.env` and set VITE_GOOGLE_MAPS_API_KEY, Firebase keys, and backend URL
+	- Copy `backend/.env.example` → `backend/.env` and set MONGODB_URI and Firebase admin credentials
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+4. Run development servers (two terminals)
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+	# Terminal 1 - backend
+	cd backend; npm run dev
+
+	# Terminal 2 - frontend
+	cd frontend; npm run dev
+
+The frontend will normally run at http://localhost:5173 and the backend at http://localhost:8080 (confirm in console output).
+
+---
+
+## How to use (demo instructions for evaluators)
+
+1. Open the frontend URL in a browser.
+2. Use the demo accounts or register a new user.
+3. Navigate to "Pet Records" to add a pet — after successful creation, the pet will appear below the form in the Pet Records page (create/list/edit/delete supported).
+4. Open the Admin Dashboard (admin account) to manage users, pets, appointments, vets, and articles.
+
+Screenshots and a short walkthrough video are helpful for exams — include them in the repository under `docs/screenshots/` if available.
+
+---
+
+## Development notes & internals (for lecturers)
+
+- Frontend pages are under `frontend/src/pages/`.
+- Shared types for API models are in `frontend/src/types/api.ts`.
+- Admin API and controllers are in `backend/controllers/` and routes in `backend/routes/`.
+- Pet creation includes frontend normalization to the API types (e.g. gender capitalization). Backend controllers enforce validation and create or reuse existing related records as needed.
+
+Important implementation detail: when creating pets, the app checks for existing records where appropriate and avoids duplicate creation. Pet CRUD is stored in the pets collection (Mongoose model). See `backend/controllers/petController.js` and `frontend/src/services/pets.ts` for the full flow.
+
+---
+
+## Testing and QA
+
+- ESLint: `cd frontend && npm run lint`
+- Type checking: `cd frontend && npx tsc --noEmit`
+- Run unit/integration tests (if present) with the project test scripts — add tests under `frontend/__tests__/` or `backend/__tests__/`.
+
+---
+
+## Contributing
+
+Contributions are welcome. For class submissions, please include a short changelog and clearly comment any significant design decisions. For OSS contributions follow these steps:
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feat/your-change`
+3. Commit with conventional commit messages (`feat:`, `fix:`, `chore:`, `docs:`)
+4. Open a pull request describing the change
+
+---
+
+## Deployment
+
+This repo can be deployed to Vercel, Netlify (frontend) and an appropriate Node host (backend). If using the provided Lovable project, you can publish directly from the Lovable UI.
+
+---
+
+## License & attribution
+
+Specify your preferred license here (e.g., MIT). Include attribution for any third-party assets.
+
+---
+
+## Contact
+
+Project lead: Vinuki Omalshara
+Repository: https://github.com/VinukiOmalshara/HappyTails
+
+If you'd like, I can also:
+
+- Add example screenshots under `docs/screenshots/` and reference them in this README
+- Add CI configuration (GitHub Actions) for linting and type checking on PRs
+- Create a short walkthrough video and link it from the README
+
+---
+
+Thank you — good luck with your presentation or lecture review.
