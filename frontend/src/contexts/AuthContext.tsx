@@ -60,7 +60,8 @@ export interface RegisterData {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  GUEST_USAGE: 'happytails_guest_usage'
+  GUEST_USAGE: 'happytails_guest_usage',
+  SAVED_EMAIL: 'happytails_saved_email'
 };
 
 // Helper to convert API user to local user format
@@ -170,6 +171,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Set user state
       setUser(convertApiUser(response.user));
       
+      // Save email for future logins (security: only email, not password)
+      localStorage.setItem(STORAGE_KEYS.SAVED_EMAIL, userData.email.trim());
+      
       // If user provided pet information during registration, create the pet
       if (userData.petName && userData.petType && response.isNewUser) {
         console.log('Creating initial pet:', userData.petName);
@@ -234,6 +238,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Set user state
       setUser(convertApiUser(response.user));
+      
+      // Save email for future logins (security: only email, not password)
+      if (user.email) {
+        localStorage.setItem(STORAGE_KEYS.SAVED_EMAIL, user.email);
+      }
       
       // Clear guest usage
       setGuestUsageCount(0);

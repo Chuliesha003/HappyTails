@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { PawPrint } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { FcGoogle } from "react-icons/fc";
+
+const SAVED_EMAIL_KEY = 'happytails_saved_email';
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -17,6 +19,14 @@ const Login = () => {
   const location = useLocation();
   
   const from = location.state?.from || "/";
+
+  // Load saved email on component mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem(SAVED_EMAIL_KEY);
+    if (savedEmail) {
+      setEmail(savedEmail);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +44,9 @@ const Login = () => {
     
     const success = await login(email, password);
     if (success) {
+      // Save email to localStorage for future logins (security: only email, not password)
+      localStorage.setItem(SAVED_EMAIL_KEY, email.trim());
+      
       // Redirect based on user role
       const emailLower = email.toLowerCase();
       if (emailLower === 'admin@happytails.com' || emailLower === 'demo.admin@happytails.com') {
@@ -50,6 +63,7 @@ const Login = () => {
     setError("");
     const success = await signInWithGoogle();
     if (success) {
+      // Note: Google Sign-In email is saved automatically in AuthContext
       navigate('/user-dashboard', { replace: true });
     } else {
       setError("Google Sign-In failed. Please try again.");
