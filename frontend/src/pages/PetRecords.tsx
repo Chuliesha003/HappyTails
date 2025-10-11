@@ -106,16 +106,23 @@ const PetRecords = () => {
       setIsSubmitting(true);
       setError(null);
 
+      // Normalize fields to match backend expectations
+      const genderNormalized = formData.gender === 'male' ? 'Male' : formData.gender === 'female' ? 'Female' : 'Unknown';
+      const allergiesArray = (formData.allergies || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
       const petData = {
-        name: formData.name,
+        name: formData.name.trim(),
         species: formData.species || 'Dog',
-        breed: formData.breed,
+        breed: formData.breed.trim(),
         age: Number(formData.age),
         weight: Number(formData.weight),
-        gender: formData.gender as 'male' | 'female',
-        color: formData.color,
-        medicalHistory: formData.medicalHistory,
-        allergies: formData.allergies
+        gender: genderNormalized as 'Male' | 'Female' | 'Unknown',
+        color: formData.color?.trim() || undefined,
+        // Do not send medicalHistory in create (schema expects subdocs); can be added later via specific endpoints
+        allergies: allergiesArray.length ? allergiesArray : undefined,
       };
 
       if (editingPetId) {
@@ -163,11 +170,11 @@ const PetRecords = () => {
       breed: pet.breed,
       age: String(pet.age),
       weight: String(pet.weight),
-      gender: pet.gender,
+  gender: (pet.gender || '').toLowerCase(),
       species: pet.species,
       color: pet.color || '',
-      medicalHistory: pet.medicalHistory || '',
-      allergies: pet.allergies || ''
+      medicalHistory: '',
+      allergies: Array.isArray(pet.allergies) ? pet.allergies.join(', ') : (pet.allergies as unknown as string) || ''
     });
     setEditingPetId(pet.id);
   };
@@ -472,17 +479,25 @@ const PetRecords = () => {
                     )}
                   </div>
                   
-                  {pet.medicalHistory && (
+                  {Array.isArray(pet.medicalHistory) && pet.medicalHistory.length > 0 && (
                     <div>
                       <span className="text-muted-foreground text-sm">Medical History:</span>
-                      <div className="text-sm mt-1">{pet.medicalHistory}</div>
+                      <ul className="text-sm mt-1 list-disc list-inside space-y-1">
+                        {pet.medicalHistory.slice(0, 3).map((rec, idx) => (
+                          <li key={idx}>
+                            {rec.date ? new Date(rec.date).toLocaleDateString() + ': ' : ''}
+                            {rec.condition}
+                            {rec.notes ? ` — ${rec.notes}` : ''}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                   
-                  {pet.allergies && (
+                  {Array.isArray(pet.allergies) && pet.allergies.length > 0 && (
                     <div>
                       <span className="text-muted-foreground text-sm">Allergies:</span>
-                      <div className="text-sm mt-1">{pet.allergies}</div>
+                      <div className="text-sm mt-1">{pet.allergies.join(', ')}</div>
                     </div>
                   )}
                   

@@ -95,10 +95,9 @@ export interface CreatePetRequest {
   breed: string;
   age: number;
   weight: number;
-  gender: 'male' | 'female';
+  gender: 'Male' | 'Female' | 'Unknown';
   color?: string;
-  medicalHistory?: string;
-  allergies?: string;
+  allergies?: string[];
 }
 
 // Vet Types

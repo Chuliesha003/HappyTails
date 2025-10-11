@@ -88,7 +88,7 @@ const getPetById = async (req, res) => {
 const createPet = async (req, res) => {
   try {
     const { uid: firebaseUid } = req.user;
-    const petData = req.body;
+  const petData = req.body || {};
 
     // Find user
     const user = await User.findByFirebaseUid(firebaseUid);
@@ -100,9 +100,37 @@ const createPet = async (req, res) => {
       });
     }
 
+    // Normalize inputs
+    const name = (petData.name || '').trim();
+    const species = (petData.species || '').trim();
+    const breed = (petData.breed || '').trim();
+    const gender = petData.gender || 'Unknown';
+    const age = typeof petData.age === 'number' ? petData.age : Number(petData.age);
+    const weight = typeof petData.weight === 'number' ? petData.weight : Number(petData.weight);
+    const allergies = Array.isArray(petData.allergies)
+      ? petData.allergies.map((a) => String(a).trim()).filter(Boolean)
+      : [];
+
+    if (!name || !species || !breed) {
+      return res.status(400).json({ success: false, message: 'Validation error', errors: ['name, species, and breed are required'] });
+    }
+
+    // Check duplicate active pet by name+species for this user
+    const existing = await Pet.findOne({ owner: user._id, name, species, isActive: true });
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'A pet with the same name and species already exists.' });
+    }
+
     // Create new pet
     const pet = new Pet({
-      ...petData,
+      name,
+      species,
+      breed,
+      gender,
+      age,
+      weight,
+      color: (petData.color || '').trim() || undefined,
+      allergies,
       owner: user._id,
     });
 
