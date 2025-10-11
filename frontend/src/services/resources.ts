@@ -1,15 +1,66 @@
-import api, { handleApiError } from '@/lib/api';
-import type { Article, CreateArticleRequest, PaginationParams, PaginatedResponse } from '@/types/api';
+import api, { handleApiError, type ApiResponse } from '@/lib/api';
+import type { Article, CreateArticleRequest, PaginationParams } from '@/types/api';
+
+// Backend DTOs (subset) to type responses without using any
+type ApiUserRef = { fullName?: string; email?: string } | string | null | undefined;
+type ApiArticle = {
+  _id?: string;
+  id?: string;
+  slug?: string;
+  title: string;
+  content: string;
+  category: Article['category'];
+  author?: ApiUserRef;
+  authorName?: string;
+  imageUrl?: string;
+  images?: string[];
+  tags?: string[];
+  isPublished?: boolean;
+  published?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+type ApiArticlesResponse = ApiResponse<ApiArticle[]> & { pagination?: unknown };
+type ApiArticleResponse = ApiResponse<ApiArticle>;
+
+// Normalize backend article to frontend Article shape
+const mapApiArticle = (a: ApiArticle): Article => {
+  let authorStr = '';
+  if (typeof a.author === 'string') authorStr = a.author;
+  else if (a.author && typeof a.author === 'object') authorStr = a.author.fullName || a.author.email || '';
+  else authorStr = a.authorName || '';
+
+  return {
+    id: a.id || a._id || a.slug,
+    title: a.title,
+    content: a.content,
+    category: a.category,
+    author: authorStr,
+  authorName: a.authorName || authorStr,
+  imageUrl: a.imageUrl,
+  images: a.images || [],
+    tags: a.tags || [],
+    published: typeof a.published === 'boolean' ? a.published : !!a.isPublished,
+    createdAt: a.createdAt,
+    updatedAt: a.updatedAt,
+  };
+};
 
 // Resources Service
 export const resourcesService = {
   /**
    * Get all articles with optional pagination and filters
    */
-  getAllArticles: async (params?: PaginationParams & { category?: string; search?: string }): Promise<PaginatedResponse<Article>> => {
+  getAllArticles: async (params?: PaginationParams & { category?: string; search?: string }): Promise<ApiResponse<Article[]> & { pagination?: unknown }> => {
     try {
-      const response = await api.get<PaginatedResponse<Article>>('/resources/articles', params as Record<string, unknown>);
-      return response;
+      const response = await api.get<ApiArticlesResponse>(
+        '/resources',
+        params as Record<string, unknown>
+      );
+      return {
+        ...response,
+        data: (response.data || []).map(mapApiArticle),
+      };
     } catch (error) {
       throw handleApiError(error);
     }
@@ -20,8 +71,8 @@ export const resourcesService = {
    */
   getArticleById: async (id: string): Promise<Article> => {
     try {
-      const response = await api.get<{ article: Article }>(`/resources/articles/${id}`);
-      return response.article;
+      const response = await api.get<ApiArticleResponse>(`/resources/${id}`);
+      return mapApiArticle(response.data);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -32,11 +83,8 @@ export const resourcesService = {
    */
   getArticlesByCategory: async (category: string, params?: PaginationParams): Promise<Article[]> => {
     try {
-      const response = await api.get<{ articles: Article[] }>(
-        `/resources/articles/category/${category}`,
-        params as Record<string, unknown>
-      );
-      return response.articles;
+      const response = await api.get<ApiArticlesResponse>(`/resources/category/${category}`, params as Record<string, unknown>);
+      return (response.data || []).map(mapApiArticle);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -47,11 +95,11 @@ export const resourcesService = {
    */
   searchArticles: async (query: string, params?: PaginationParams): Promise<Article[]> => {
     try {
-      const response = await api.get<{ articles: Article[] }>(
-        '/resources/articles/search',
-        { q: query, ...params } as Record<string, unknown>
+      const response = await api.get<ApiArticlesResponse>(
+        '/resources',
+        { search: query, ...(params || {}) } as Record<string, unknown>
       );
-      return response.articles;
+      return (response.data || []).map(mapApiArticle);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -62,8 +110,8 @@ export const resourcesService = {
    */
   createArticle: async (data: CreateArticleRequest): Promise<Article> => {
     try {
-      const response = await api.post<{ article: Article }>('/resources/articles', data);
-      return response.article;
+      const response = await api.post<ApiArticleResponse>('/resources', data);
+      return mapApiArticle(response.data);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -74,8 +122,8 @@ export const resourcesService = {
    */
   updateArticle: async (id: string, data: Partial<CreateArticleRequest>): Promise<Article> => {
     try {
-      const response = await api.put<{ article: Article }>(`/resources/articles/${id}`, data);
-      return response.article;
+  const response = await api.put<ApiArticleResponse>(`/resources/${id}`, data);
+      return mapApiArticle(response.data);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -86,7 +134,7 @@ export const resourcesService = {
    */
   deleteArticle: async (id: string): Promise<void> => {
     try {
-      await api.delete(`/resources/articles/${id}`);
+      await api.delete(`/resources/${id}`);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -95,13 +143,13 @@ export const resourcesService = {
   /**
    * Publish/unpublish an article (admin only)
    */
-  togglePublishArticle: async (id: string, published: boolean): Promise<Article> => {
+  togglePublishArticle: async (id: string, _published: boolean): Promise<Article> => {
     try {
-      const response = await api.patch<{ article: Article }>(
-        `/resources/articles/${id}/publish`,
-        { published }
+      const response = await api.patch<ApiArticleResponse>(
+        `/resources/${id}/publish`,
+        {}
       );
-      return response.article;
+      return mapApiArticle(response.data);
     } catch (error) {
       throw handleApiError(error);
     }
