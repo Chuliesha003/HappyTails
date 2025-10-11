@@ -47,13 +47,8 @@ const Login = () => {
       // Save email to localStorage for future logins (security: only email, not password)
       localStorage.setItem(SAVED_EMAIL_KEY, email.trim());
       
-      // Redirect based on user role
-      const emailLower = email.toLowerCase();
-      if (emailLower === 'admin@happytails.com' || emailLower === 'demo.admin@happytails.com') {
-        navigate('/admin-dashboard', { replace: true });
-      } else {
-        navigate('/user-dashboard', { replace: true });
-      }
+      // Redirect to homepage after successful login
+      navigate('/', { replace: true });
     } else {
       setError("Invalid email or password. Please check your credentials.");
     }
@@ -64,7 +59,7 @@ const Login = () => {
     const success = await signInWithGoogle();
     if (success) {
       // Note: Google Sign-In email is saved automatically in AuthContext
-      navigate('/user-dashboard', { replace: true });
+      navigate('/', { replace: true });
     } else {
       setError("Google Sign-In failed. Please try again.");
     }

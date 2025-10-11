@@ -58,8 +58,8 @@ const GetStarted = () => {
     });
 
     if (success) {
-      // Redirect to user dashboard after successful registration
-      navigate('/user-dashboard', { replace: true });
+      // Redirect to homepage after successful registration
+      navigate('/', { replace: true });
     } else {
       setError("Registration failed. Please try again.");
     }
@@ -69,7 +69,7 @@ const GetStarted = () => {
     setError("");
     const success = await signInWithGoogle();
     if (success) {
-      navigate('/user-dashboard', { replace: true });
+      navigate('/', { replace: true });
     } else {
       setError("Google Sign-In failed. Please try again.");
     }
