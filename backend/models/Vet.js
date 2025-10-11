@@ -111,6 +111,14 @@ const vetSchema = new mongoose.Schema(
       },
     ],
     location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point',
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+      },
       address: {
         type: String,
         required: [true, 'Address is required'],
@@ -133,14 +141,6 @@ const vetSchema = new mongoose.Schema(
         type: String,
         default: 'Sri Lanka',
         trim: true,
-      },
-      coordinates: {
-        latitude: {
-          type: Number,
-        },
-        longitude: {
-          type: Number,
-        },
       },
     },
     availability: [availabilitySchema],
@@ -202,6 +202,8 @@ vetSchema.index({ 'location.city': 1 });
 vetSchema.index({ specialization: 1 });
 vetSchema.index({ rating: -1 });
 vetSchema.index({ isActive: 1, isVerified: 1 });
+// Geospatial index for nearby search
+vetSchema.index({ 'location.coordinates': '2dsphere' });
 
 // Text index for search functionality
 vetSchema.index({
@@ -301,6 +303,23 @@ vetSchema.statics.findBySpecialization = function (specialization) {
     isActive: true,
     isVerified: true,
   }).sort({ rating: -1 });
+};
+
+// Static method to find nearby vets using geospatial query
+vetSchema.statics.findNearby = function (longitude, latitude, maxDistanceKm = 50) {
+  return this.find({
+    'location.coordinates': {
+      $near: {
+        $geometry: {
+          type: 'Point',
+          coordinates: [longitude, latitude],
+        },
+        $maxDistance: maxDistanceKm * 1000, // Convert km to meters
+      },
+    },
+    isActive: true,
+    isVerified: true,
+  }).limit(50); // Limit to 50 results
 };
 
 const Vet = mongoose.model('Vet', vetSchema);

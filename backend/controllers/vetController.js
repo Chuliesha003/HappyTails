@@ -2,6 +2,55 @@ const Vet = require('../models/Vet');
 const User = require('../models/User');
 
 /**
+ * Search for nearby vets based on geolocation
+ */
+const searchNearbyVets = async (req, res) => {
+  try {
+    const { latitude, longitude, maxDistance } = req.query;
+
+    // Validate coordinates
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        message: 'Latitude and longitude are required',
+      });
+    }
+
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    const maxDistanceKm = maxDistance ? parseFloat(maxDistance) : 50;
+
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid coordinates provided',
+      });
+    }
+
+    // Find nearby vets using geospatial query
+    const vets = await Vet.findNearby(lng, lat, maxDistanceKm);
+
+    res.status(200).json({
+      success: true,
+      count: vets.length,
+      vets: vets.map((vet) => vet.toSafeObject()),
+      location: {
+        latitude: lat,
+        longitude: lng,
+        maxDistance: maxDistanceKm,
+      },
+    });
+  } catch (error) {
+    console.error('Search nearby vets error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to search nearby veterinarians',
+      error: error.message,
+    });
+  }
+};
+
+/**
  * Get all vets with optional filters
  */
 const getAllVets = async (req, res) => {
@@ -349,6 +398,7 @@ const getCities = async (req, res) => {
 
 module.exports = {
   getAllVets,
+  searchNearbyVets,
   getVetById,
   createVet,
   updateVet,

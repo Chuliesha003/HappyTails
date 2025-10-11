@@ -13,6 +13,14 @@ const { searchLimiter, createLimiter } = require('../middleware/security');
 router.get('/', searchLimiter, vetController.getAllVets);
 
 /**
+ * @route   GET /api/vets/nearby
+ * @desc    Search for nearby vets based on user's geolocation
+ * @access  Public
+ * @query   latitude, longitude, maxDistance (in km, default: 50)
+ */
+router.get('/nearby', searchLimiter, vetController.searchNearbyVets);
+
+/**
  * @route   GET /api/vets/specializations
  * @desc    Get list of all specializations (for filter dropdown)
  * @access  Public
