@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import { auth } from './firebase';
 
 // API base URL from environment variables
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -38,14 +39,20 @@ const sleep = (ms: number): Promise<void> => {
   return new Promise(resolve => setTimeout(resolve, ms));
 };
 
-// Request interceptor to add auth token
+// Request interceptor to add Firebase auth token
 axiosInstance.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    // Get token from localStorage
-    const token = localStorage.getItem('happytails_token');
-    
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+  async (config: InternalAxiosRequestConfig) => {
+    try {
+      // Get current Firebase user
+      const currentUser = auth.currentUser;
+      
+      if (currentUser && config.headers) {
+        // Get fresh Firebase ID token
+        const idToken = await currentUser.getIdToken();
+        config.headers.Authorization = `Bearer ${idToken}`;
+      }
+    } catch (error) {
+      console.warn('Unable to attach Firebase token:', error);
     }
     
     return config;
