@@ -97,11 +97,15 @@ const checkRole = (...allowedRoles) => {
       }
 
       // Check if user has required role
-      if (!allowedRoles.includes(user.role)) {
+      // allowedRoles is an array of arrays (e.g., [['admin'], ['vet']])
+      // We need to check if user.role is in any of the allowed role arrays
+      const hasRequiredRole = allowedRoles.some(roleArray => roleArray.includes(user.role));
+
+      if (!hasRequiredRole) {
         console.log('[AUTH DEBUG] Role check FAILED - Required:', allowedRoles, 'User has:', user.role);
         return res.status(403).json({
           success: false,
-          message: `Access denied. Required roles: ${allowedRoles.join(', ')}. Your role: ${user.role}`,
+          message: `Access denied. Required roles: ${allowedRoles.flat().join(', ')}. Your role: ${user.role}`,
         });
       }
 

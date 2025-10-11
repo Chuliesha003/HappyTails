@@ -58,4 +58,26 @@ router.get('/vets', adminController.getAllVetsAdmin);
 // Toggle vet verification status
 router.patch('/vets/:id/verify', adminController.toggleVetVerification);
 
+/**
+ * Pet Management
+ */
+
+// Get all pets with pagination and filters
+router.get('/pets', adminController.getAllPets);
+
+// Get single pet details
+router.get('/pets/:id', adminController.getPetById);
+
+// Create new pet
+router.post('/pets', adminController.createPet);
+
+// Update pet
+router.put('/pets/:id', adminController.updatePet);
+
+// Delete pet
+router.delete('/pets/:id', adminController.deletePet);
+
+// Toggle pet active status
+router.patch('/pets/:id/status', adminController.togglePetStatus);
+
 module.exports = router;

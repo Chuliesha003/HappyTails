@@ -569,3 +569,322 @@ exports.getRecentActivity = async (req, res) => {
     });
   }
 };
+
+/**
+ * Pet Management
+ */
+
+// Get all pets with pagination and filters
+exports.getAllPets = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      species,
+      owner,
+      search,
+      isActive = 'true'
+    } = req.query;
+
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Build filter object
+    const filter = {};
+
+    if (species && species !== 'all') {
+      filter.species = species;
+    }
+
+    if (owner) {
+      filter.owner = owner;
+    }
+
+    if (isActive !== 'all') {
+      filter.isActive = isActive === 'true';
+    }
+
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { breed: { $regex: search, $options: 'i' } },
+        { species: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Get pets with pagination
+    const pets = await Pet.find(filter)
+      .populate('owner', 'fullName email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
+    // Get total count
+    const total = await Pet.countDocuments(filter);
+    const totalPages = Math.ceil(total / limitNum);
+
+    res.status(200).json({
+      success: true,
+      pets,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalPets: total,
+        hasMore: pageNum < totalPages
+      }
+    });
+  } catch (error) {
+    console.error('Get all pets error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pets',
+      error: error.message,
+    });
+  }
+};
+
+// Get single pet details
+exports.getPetById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const pet = await Pet.findById(id)
+      .populate('owner', 'fullName email phoneNumber')
+      .lean();
+
+    if (!pet) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pet not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      pet,
+    });
+  } catch (error) {
+    console.error('Get pet by ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pet',
+      error: error.message,
+    });
+  }
+};
+
+// Create new pet (admin)
+exports.createPet = async (req, res) => {
+  try {
+    const {
+      name,
+      species,
+      breed,
+      age,
+      ageUnit = 'years',
+      dateOfBirth,
+      weight,
+      weightUnit = 'kg',
+      gender = 'Unknown',
+      color,
+      microchipId,
+      owner,
+      allergies = [],
+      medications = [],
+      specialNeeds,
+      photoUrl
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !species || !breed || !owner) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, species, breed, and owner are required',
+      });
+    }
+
+    // Check if owner exists
+    const ownerExists = await User.findById(owner);
+    if (!ownerExists) {
+      return res.status(404).json({
+        success: false,
+        message: 'Owner not found',
+      });
+    }
+
+    // Check if microchip ID is unique (if provided)
+    if (microchipId) {
+      const existingPet = await Pet.findOne({ microchipId });
+      if (existingPet) {
+        return res.status(400).json({
+          success: false,
+          message: 'Microchip ID already exists',
+        });
+      }
+    }
+
+    // Create new pet
+    const newPet = new Pet({
+      name,
+      species,
+      breed,
+      age,
+      ageUnit,
+      dateOfBirth,
+      weight,
+      weightUnit,
+      gender,
+      color,
+      microchipId,
+      owner,
+      allergies,
+      medications,
+      specialNeeds,
+      photoUrl,
+      isActive: true
+    });
+
+    await newPet.save();
+
+    // Populate owner info for response
+    await newPet.populate('owner', 'fullName email');
+
+    res.status(201).json({
+      success: true,
+      message: 'Pet created successfully',
+      pet: newPet,
+    });
+  } catch (error) {
+    console.error('Create pet error:', error);
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Microchip ID already exists',
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create pet',
+      error: error.message,
+    });
+  }
+};
+
+// Update pet
+exports.updatePet = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Remove fields that shouldn't be updated directly
+    delete updateData._id;
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
+
+    // Check if microchip ID is being changed and if it's unique
+    if (updateData.microchipId) {
+      const existingPet = await Pet.findOne({
+        microchipId: updateData.microchipId,
+        _id: { $ne: id }
+      });
+      if (existingPet) {
+        return res.status(400).json({
+          success: false,
+          message: 'Microchip ID already exists',
+        });
+      }
+    }
+
+    const updatedPet = await Pet.findByIdAndUpdate(
+      id,
+      updateData,
+      {
+        new: true,
+        runValidators: true
+      }
+    ).populate('owner', 'fullName email');
+
+    if (!updatedPet) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pet not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Pet updated successfully',
+      pet: updatedPet,
+    });
+  } catch (error) {
+    console.error('Update pet error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update pet',
+      error: error.message,
+    });
+  }
+};
+
+// Delete pet
+exports.deletePet = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedPet = await Pet.findByIdAndDelete(id);
+
+    if (!deletedPet) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pet not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Pet deleted successfully',
+      pet: deletedPet,
+    });
+  } catch (error) {
+    console.error('Delete pet error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete pet',
+      error: error.message,
+    });
+  }
+};
+
+// Toggle pet active status
+exports.togglePetStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const pet = await Pet.findById(id);
+
+    if (!pet) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pet not found',
+      });
+    }
+
+    pet.isActive = !pet.isActive;
+    await pet.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Pet ${pet.isActive ? 'activated' : 'deactivated'} successfully`,
+      pet,
+    });
+  } catch (error) {
+    console.error('Toggle pet status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to toggle pet status',
+      error: error.message,
+    });
+  }
+};
