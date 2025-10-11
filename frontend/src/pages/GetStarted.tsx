@@ -180,7 +180,9 @@ const GetStarted = () => {
             onClick={handleGoogleSignIn}
             disabled={isLoading}
           >
-            <FcGoogle className="mr-2 h-5 w-5" />
+            <span className="mr-2">
+              <FcGoogle size={20} />
+            </span>
             Sign up with Google
           </Button>
           

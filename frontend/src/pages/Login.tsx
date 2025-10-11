@@ -116,7 +116,9 @@ const Login = () => {
             onClick={handleGoogleSignIn}
             disabled={isLoading}
           >
-            <FcGoogle className="mr-2 h-5 w-5" />
+            <span className="mr-2">
+              <FcGoogle size={20} />
+            </span>
             Sign in with Google
           </Button>
           
