@@ -187,7 +187,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             breed: 'Unknown', // Default value
             age: 0, // Default value - user can update later
             weight: 0, // Default value - user can update later
-            gender: 'male', // Default value - user can update later
+            gender: 'Male', // Default value - user can update later (match CreatePetRequest)
           });
           console.log('Initial pet created successfully');
         } catch (petError) {
