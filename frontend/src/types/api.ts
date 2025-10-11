@@ -41,16 +41,52 @@ export interface Pet {
   name: string;
   species: string;
   breed: string;
-  age: number;
-  weight: number;
-  gender: 'male' | 'female';
+  age?: number;
+  ageUnit?: string;
+  dateOfBirth?: string;
+  weight?: number;
+  weightUnit?: string;
+  gender?: string;
   color?: string;
-  medicalHistory?: string;
-  allergies?: string;
+  microchipId?: string;
+  owner: string | User;
+  medicalHistory?: MedicalRecord[];
+  vaccinations?: Vaccination[];
+  allergies?: string[];
+  medications?: Medication[];
+  specialNeeds?: string;
   photoUrl?: string;
-  owner: string;
+  isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface MedicalRecord {
+  date: string;
+  condition: string;
+  diagnosis?: string;
+  treatment?: string;
+  veterinarian?: string;
+  notes?: string;
+  medications?: Medication[];
+}
+
+export interface Vaccination {
+  name: string;
+  date: string;
+  nextDueDate?: string;
+  administeredBy?: string;
+  notes?: string;
+}
+
+export interface Medication {
+  name: string;
+  dosage?: string;
+  frequency?: string;
+  duration?: string;
+  startDate?: string;
+  endDate?: string;
+  notes?: string;
 }
 
 export interface CreatePetRequest {
@@ -75,9 +111,12 @@ export interface Vet {
   city: string;
   state: string;
   zipCode: string;
+  clinicName?: string;
+  licenseNumber?: string;
   specialization?: string;
   experience?: number;
   verified: boolean;
+  active?: boolean;
   location?: {
     type: 'Point';
     coordinates: [number, number]; // [longitude, latitude]

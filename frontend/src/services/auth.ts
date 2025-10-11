@@ -18,7 +18,7 @@ export const authService = {
         fullName: data.fullName 
       });
       
-      const response = await api.post<any>('/auth/register', data);
+      const response = await api.post<{ success: boolean; message: string; user: User; isNewUser: boolean }>('/auth/register', data);
       
       console.log('Backend response received:', response);
       
