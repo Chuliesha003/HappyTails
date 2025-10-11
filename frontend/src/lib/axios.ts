@@ -43,6 +43,14 @@ const sleep = (ms: number): Promise<void> => {
 axiosInstance.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
+      // Skip adding token for public auth endpoints
+      const isPublicAuthEndpoint = config.url?.includes('/auth/register');
+      
+      if (isPublicAuthEndpoint) {
+        // These endpoints receive the token in the request body, not header
+        return config;
+      }
+      
       // Get current Firebase user
       const currentUser = auth.currentUser;
       
@@ -53,6 +61,7 @@ axiosInstance.interceptors.request.use(
       }
     } catch (error) {
       console.warn('Unable to attach Firebase token:', error);
+      // Continue with the request even if token fetch fails
     }
     
     return config;
