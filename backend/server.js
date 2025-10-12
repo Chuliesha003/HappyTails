@@ -112,6 +112,10 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Serve static assets from public (uploads/articles will be available at /uploads/articles/...)
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Data sanitization against NoSQL injection
 app.use(sanitizeData);
 
