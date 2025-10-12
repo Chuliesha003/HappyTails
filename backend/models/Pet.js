@@ -169,38 +169,6 @@ const petSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    documents: [
-      {
-        fileName: {
-          type: String,
-          required: true,
-          trim: true,
-        },
-        filePath: {
-          type: String,
-          required: true,
-          trim: true,
-        },
-        fileType: {
-          type: String,
-          enum: ['pdf', 'image', 'document'],
-          required: true,
-        },
-        documentType: {
-          type: String,
-          enum: ['vaccination', 'medical_report', 'surgery_report', 'prescription', 'lab_results', 'other'],
-          required: true,
-        },
-        description: {
-          type: String,
-          trim: true,
-        },
-        uploadedAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
     isActive: {
       type: Boolean,
       default: true,
@@ -259,12 +227,6 @@ petSchema.methods.addMedicalRecord = function (record) {
 // Method to add vaccination
 petSchema.methods.addVaccination = function (vaccination) {
   this.vaccinations.push(vaccination);
-  return this.save();
-};
-
-// Method to add document
-petSchema.methods.addDocument = function (document) {
-  this.documents.push(document);
   return this.save();
 };
 

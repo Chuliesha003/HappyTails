@@ -10,10 +10,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
-import { Edit, Plus, Trash2, AlertCircle, Loader2, X, FileText, Syringe, Pill, ChevronUp, Upload, File, Image, Download } from "lucide-react";
+import { Edit, Plus, Trash2, AlertCircle, Loader2, X, FileText, Syringe, Pill } from "lucide-react";
 import { petsService } from "@/services/pets";
 import { toast } from "@/hooks/use-toast";
-import type { Pet, MedicalRecord, Vaccination, Medication, Document } from "@/types/api";
+import type { Pet, MedicalRecord, Vaccination, Medication } from "@/types/api";
 
 interface FormData {
   name: string;
@@ -29,7 +29,6 @@ interface FormData {
   medicalRecords: MedicalRecord[];
   vaccinations: Vaccination[];
   medications: Medication[];
-  documents: Document[];
   specialNeeds: string;
 }
 
@@ -49,10 +48,6 @@ const PetRecords = () => {
   const [currentVaccination, setCurrentVaccination] = useState<Vaccination | null>(null);
   const [currentMedication, setCurrentMedication] = useState<Medication | null>(null);
   
-  // File upload states
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  
   const [formData, setFormData] = useState<FormData>({
     name: "",
     breed: "",
@@ -66,7 +61,6 @@ const PetRecords = () => {
     medicalRecords: [],
     vaccinations: [],
     medications: [],
-    documents: [],
     specialNeeds: ""
   });
 
@@ -115,7 +109,6 @@ const PetRecords = () => {
       medicalRecords: [],
       vaccinations: [],
       medications: [],
-      documents: [],
       specialNeeds: ""
     });
     setEditingPetId(null);
@@ -213,7 +206,6 @@ const PetRecords = () => {
       medicalRecords: pet.medicalHistory || [],
       vaccinations: pet.vaccinations || [],
       medications: pet.medications || [],
-      documents: pet.documents || [],
       specialNeeds: pet.specialNeeds || ''
     });
     setEditingPetId(pet.id);
@@ -359,99 +351,6 @@ const PetRecords = () => {
   const handleDeleteMedication = (index: number) => {
     const updatedMedications = formData.medications.filter((_, i) => i !== index);
     setFormData(prev => ({ ...prev, medications: updatedMedications }));
-  };
-
-  // File upload functions
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload PDF or image files only.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Validate file size (10MB limit)
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload files smaller than 10MB.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsUploading(true);
-    setUploadProgress(0);
-
-    try {
-      const formDataUpload = new FormData();
-      formDataUpload.append('file', file);
-      formDataUpload.append('documentType', 'other'); // Default type, can be changed later
-
-      // Upload file to backend
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formDataUpload,
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const result = await response.json();
-
-      // Add document to form data
-      const newDocument: Document = {
-        fileName: file.name,
-        filePath: result.filePath,
-        fileType: file.type.startsWith('image/') ? 'image' : 'pdf',
-        documentType: 'other',
-        description: '',
-        uploadedAt: new Date().toISOString()
-      };
-
-      setFormData(prev => ({
-        ...prev,
-        documents: [...prev.documents, newDocument]
-      }));
-
-      toast({
-        title: "File uploaded successfully",
-        description: `${file.name} has been uploaded.`,
-      });
-
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast({
-        title: "Upload failed",
-        description: "Failed to upload file. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
-      // Reset file input
-      event.target.value = '';
-    }
-  };
-
-  const handleDeleteDocument = (index: number) => {
-    const updatedDocuments = formData.documents.filter((_, i) => i !== index);
-    setFormData(prev => ({ ...prev, documents: updatedDocuments }));
-  };
-
-  const handleDownloadDocument = (document: Document) => {
-    window.open(document.filePath, '_blank');
   };
 
   return (
@@ -856,110 +755,6 @@ const PetRecords = () => {
                             size="sm"
                             variant="outline"
                             onClick={() => handleDeleteMedication(index)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Documents Section */}
-      {editingPetId && (
-        <Card className="max-w-3xl mx-auto">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <File className="h-5 w-5" />
-                Documents & Files
-              </span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  id="file-upload"
-                  className="hidden"
-                  accept=".pdf,image/*"
-                  onChange={handleFileUpload}
-                  disabled={isUploading}
-                />
-                <Label htmlFor="file-upload" className="cursor-pointer">
-                  <Button type="button" size="sm" disabled={isUploading} asChild>
-                    <span>
-                      {isUploading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Uploading...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload File
-                        </>
-                      )}
-                    </span>
-                  </Button>
-                </Label>
-              </div>
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Upload vaccination certificates, medical reports, surgery records, prescriptions, and other important documents.
-            </p>
-          </CardHeader>
-          <CardContent>
-            {formData.documents.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <File className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>No documents uploaded yet</p>
-                <p className="text-xs">Supported formats: PDF, JPG, PNG, GIF, WebP (max 10MB)</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {formData.documents.map((document, index) => (
-                  <Card key={index} className="border-l-4 border-l-blue-500">
-                    <CardContent className="pt-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-2">
-                            {document.fileType === 'pdf' ? (
-                              <FileText className="h-5 w-5 text-red-500" />
-                            ) : (
-                              <Image className="h-5 w-5 text-green-500" />
-                            )}
-                            <h4 className="font-semibold">{document.fileName}</h4>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span>Type: {document.documentType.replace('_', ' ')}</span>
-                            {document.uploadedAt && (
-                              <span>Uploaded: {new Date(document.uploadedAt).toLocaleDateString()}</span>
-                            )}
-                          </div>
-                          {document.description && (
-                            <p className="text-sm">
-                              <span className="font-medium">Description:</span> {document.description}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDownloadDocument(document)}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeleteDocument(index)}
                             className="text-destructive hover:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />

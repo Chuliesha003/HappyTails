@@ -56,7 +56,6 @@ export interface Pet {
   medications?: Medication[];
   specialNeeds?: string;
   photoUrl?: string;
-  documents?: Document[];
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -88,15 +87,6 @@ export interface Medication {
   startDate?: string;
   endDate?: string;
   notes?: string;
-}
-
-export interface Document {
-  fileName: string;
-  filePath: string;
-  fileType: 'pdf' | 'image' | 'document';
-  documentType: 'vaccination' | 'medical_report' | 'surgery_report' | 'prescription' | 'lab_results' | 'other';
-  description?: string;
-  uploadedAt?: string;
 }
 
 export interface CreatePetRequest {
