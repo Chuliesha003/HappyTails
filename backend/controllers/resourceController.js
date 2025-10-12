@@ -1,5 +1,6 @@
 const Article = require('../models/Article');
 const User = require('../models/User');
+// Doctor model removed — articles will continue to use authorName for display
 
 // Get all articles (published for users, all for admins)
 exports.getAllArticles = async (req, res) => {
@@ -70,10 +71,12 @@ exports.getArticleById = async (req, res) => {
     const { id } = req.params;
     
     // Try to find by ID or slug
-    let article = await Article.findById(id).populate('author', 'fullName profileImage email bio');
-    
+    let article = await Article.findById(id)
+      .populate('author', 'fullName profileImage email bio');
+
     if (!article) {
-      article = await Article.findOne({ slug: id }).populate('author', 'fullName profileImage email bio');
+      article = await Article.findOne({ slug: id })
+        .populate('author', 'fullName profileImage email bio');
     }
     
     if (!article) {
@@ -141,7 +144,8 @@ exports.createArticle = async (req, res) => {
     
     await article.save();
     
-    const populatedArticle = await Article.findById(article._id).populate('author', 'fullName profileImage email');
+    const populatedArticle = await Article.findById(article._1d)
+      .populate('author', 'fullName profileImage email');
     
     res.status(201).json({
       success: true,
@@ -199,7 +203,8 @@ exports.updateArticle = async (req, res) => {
     
     await article.save();
     
-    const updatedArticle = await Article.findById(article._id).populate('author', 'fullName profileImage email');
+    const updatedArticle = await Article.findById(article._id)
+      .populate('author', 'fullName profileImage email');
     
     res.status(200).json({
       success: true,
@@ -282,7 +287,8 @@ exports.togglePublish = async (req, res) => {
       await article.publish();
     }
     
-    const updatedArticle = await Article.findById(article._id).populate('author', 'fullName profileImage email');
+    const updatedArticle = await Article.findById(article._id)
+      .populate('author', 'fullName profileImage email');
     
     res.status(200).json({
       success: true,
