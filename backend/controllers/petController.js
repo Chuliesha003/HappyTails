@@ -1,5 +1,47 @@
 const Pet = require('../models/Pet');
 const User = require('../models/User');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../public/uploads/documents');
+    
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const extension = path.extname(file.originalname);
+    cb(null, 'doc-' + uniqueSuffix + extension);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow PDFs and images
+    const allowedTypes = /pdf|jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only PDF and image files are allowed!'));
+    }
+  }
+});
 
 /**
  * Get all pets for the authenticated user
@@ -373,6 +415,105 @@ const addVaccination = async (req, res) => {
   }
 };
 
+/**
+ * Add document to a pet
+ */
+const addDocument = async (req, res) => {
+  try {
+    const { uid: firebaseUid } = req.user;
+    const { id } = req.params;
+    const documentData = req.body;
+
+    // Find user
+    const user = await User.findByFirebaseUid(firebaseUid);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Find pet and verify ownership
+    const pet = await Pet.findOne({ _id: id, owner: user._id, isActive: true });
+
+    if (!pet) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pet not found or you do not have permission to update it',
+      });
+    }
+
+    // Add document
+    await pet.addDocument(documentData);
+
+    res.status(201).json({
+      success: true,
+      message: 'Document added successfully',
+      documents: pet.documents,
+    });
+  } catch (error) {
+    console.error('Add document error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to add document',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Upload a document file
+ */
+const uploadDocument = [
+  upload.single('file'),
+  async (req, res) => {
+    try {
+      const { uid: firebaseUid } = req.user;
+      const { documentType } = req.body;
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'No file uploaded',
+        });
+      }
+
+      // Find user
+      const user = await User.findByFirebaseUid(firebaseUid);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        });
+      }
+
+      // Determine file type
+      const fileType = req.file.mimetype.startsWith('image/') ? 'image' : 'pdf';
+
+      // Create file path for serving
+      const filePath = `/uploads/documents/${req.file.filename}`;
+
+      res.status(200).json({
+        success: true,
+        message: 'File uploaded successfully',
+        filePath: filePath,
+        fileName: req.file.originalname,
+        fileType: fileType,
+        documentType: documentType || 'other',
+      });
+
+    } catch (error) {
+      console.error('Upload document error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to upload document',
+        error: error.message,
+      });
+    }
+  }
+];
+
 module.exports = {
   getAllPets,
   getPetById,
@@ -381,4 +522,6 @@ module.exports = {
   deletePet,
   addMedicalRecord,
   addVaccination,
+  addDocument,
+  uploadDocument,
 };

@@ -104,4 +104,20 @@ router.post('/:id/medical-records', petController.addMedicalRecord);
  */
 router.post('/:id/vaccinations', petController.addVaccination);
 
+/**
+ * @route   POST /api/pets/:id/documents
+ * @desc    Add document to a pet
+ * @access  Private (must be owner)
+ * @body    { fileName, filePath, fileType, documentType, description }
+ */
+router.post('/:id/documents', petController.addDocument);
+
+/**
+ * @route   POST /api/pets/upload
+ * @desc    Upload a file for pet documents
+ * @access  Private
+ * @body    FormData with file and documentType
+ */
+router.post('/upload', petController.uploadDocument);
+
 module.exports = router;
