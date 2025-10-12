@@ -17,29 +17,14 @@ const mapContainerStyle: React.CSSProperties = {
 
 const VetGoogleMap: React.FC<VetGoogleMapProps> = ({ vets, userLocation, onVetClick }) => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const [map, setMap] = React.useState<google.maps.Map | null>(null);
-
+  
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'happytails-google-map',
     googleMapsApiKey: apiKey || '',
   });
 
-  // This effect runs when the user's location is found.
-  // It tells the map to pan to the new location.
-  React.useEffect(() => {
-    if (map && userLocation) {
-      console.log('[VetGoogleMap] User location updated. Panning map to:', userLocation);
-      map.panTo(userLocation);
-      map.setZoom(13);
-    }
-  }, [userLocation, map]);
-
-  console.log('[VetGoogleMap] Rendering with userLocation:', userLocation);
-  console.log('[VetGoogleMap] Rendering with vets:', vets.map(v => ({ name: v.name, city: v.city, coords: v.location?.coordinates })));
-
-  // Default to Colombo and zoom out if no user location yet.
+  // Default to Colombo if no user location
   const center = userLocation || { lat: 6.9271, lng: 79.8612 };
-  const zoom = userLocation ? 13 : 11;
 
   if (!apiKey) {
     return (
@@ -80,8 +65,7 @@ const VetGoogleMap: React.FC<VetGoogleMapProps> = ({ vets, userLocation, onVetCl
     <GoogleMap
       mapContainerStyle={mapContainerStyle}
       center={center}
-      zoom={zoom}
-      onLoad={setMap} // Keep a reference to the map instance
+      zoom={userLocation ? 13 : 12}
       options={{
         streetViewControl: false,
         mapTypeControl: false,

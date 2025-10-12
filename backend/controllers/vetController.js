@@ -145,57 +145,6 @@ async function addReview(req, res) {
   }
 }
 
-/* ------------- GET /api/vets/google-nearby ------------- */
-async function searchNearbyVetsGoogle(req, res) {
-  try {
-    const lat = pickNumber(req.query.latitude, req.query.lat);
-    const lng = pickNumber(req.query.longitude, req.query.lng);
-    const radiusMeters = parseInt(req.query.radiusMeters || req.query.radius || '50000', 10);
-
-    if (Number.isNaN(lat) || Number.isNaN(lng)) {
-      return res.status(400).json({ error: 'Latitude/longitude required' });
-    }
-
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'Google Maps API key not configured on server' });
-
-    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radiusMeters}&type=veterinary_care&key=${apiKey}`;
-    const fetch = require('node-fetch');
-    const resp = await fetch(url);
-    const data = await resp.json();
-
-    if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-      console.error('[GOOGLE_PLACES_ERROR]', data.status, data.error_message);
-      return res.status(502).json({ error: 'Google Places API error', details: data.error_message || data.status });
-    }
-
-    const vets = (data.results || []).map((place) => {
-      const lat = place.geometry?.location?.lat || 0;
-      const lng = place.geometry?.location?.lng || 0;
-      return {
-        id: place.place_id,
-        name: place.name,
-        phoneNumber: place.formatted_phone_number || null,
-        clinicName: place.name,
-        location: {
-          type: 'Point',
-          coordinates: [lng, lat],
-          address: place.vicinity || '',
-          city: (place.vicinity || '').split(',').pop()?.trim() || '',
-        },
-        address: place.vicinity || '',
-        rating: place.rating || 0,
-        isVerified: place.business_status === 'OPERATIONAL',
-      };
-    });
-
-    return res.json({ success: true, count: vets.length, vets });
-  } catch (err) {
-    console.error('[VET_GOOGLE_NEARBY_ERROR]', err);
-    return res.status(500).json({ error: 'Failed to fetch from Google Places' });
-  }
-}
-
 module.exports = {
   getAllVets,
   searchNearbyVets,
@@ -206,5 +155,4 @@ module.exports = {
   updateVet,
   deleteVet,
   addReview,
-  searchNearbyVetsGoogle,
 };
