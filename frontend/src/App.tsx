@@ -22,6 +22,7 @@ import SiteFooter from "./components/SiteFooter";
 import SymptomCheckerPage from "./pages/SymptomChecker";
 import { withAuth } from "./components/withAuth";
 import { withRole } from "./components/withRole";
+import ScrollToTop from "./components/ui/scroll-to-top";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const AppContent = () => {
         <Route path="*" element={<NotFound />} />
       </Routes>
       {!hideFooter && <SiteFooter />}
+      <ScrollToTop />
     </>
   );
 };

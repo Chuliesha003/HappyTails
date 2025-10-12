@@ -1,15 +1,19 @@
-const BASE = import.meta.env.VITE_ASSET_BASE_URL || 'http://localhost:5000';
+export const resolveArticleImage = (imagePath: string): string => {
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
 
-/**
- * Accepts:
- *  - full http(s) URLs (returns as-is)
- *  - "/uploads/..." (prefixes with base)
- *  - plain filenames like "behavior-1.jpg" (resolves to /uploads/articles/<name>)
- */
-export function resolveArticleImage(input?: string): string {
-  if (!input) return `${BASE}/uploads/articles/placeholder.jpg`;
-  const s = input.trim();
-  if (/^https?:\/\//i.test(s)) return s;
-  if (s.startsWith('/uploads/')) return `${BASE}${s}`;
-  return `${BASE}/uploads/articles/${s}`;
-}
+  // If it's a relative path starting with /uploads, prepend backend URL
+  if (imagePath.startsWith('/uploads/')) {
+    return `http://localhost:5000${imagePath}`;
+  }
+
+  // If it's just a filename, assume it's in uploads/articles/
+  if (!imagePath.includes('/')) {
+    return `http://localhost:5000/uploads/articles/${imagePath}`;
+  }
+
+  // Otherwise, prepend backend URL
+  return `http://localhost:5000/uploads/${imagePath}`;
+};
