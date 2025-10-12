@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useCallback } from "react";
 import { Search, BookOpen, AlertCircle, Calendar, User, Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react";
+const ASSETS = import.meta.env.VITE_ASSET_BASE_URL || 'http://localhost:5000';
 import { resourcesService } from "@/services/resources";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -207,7 +208,7 @@ const Resources = () => {
               <article key={article.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
                 {(article.images && article.images.length > 0) || article.imageUrl ? (
                   <div className="w-full h-48 overflow-hidden">
-                    <img src={article.images && article.images.length > 0 ? article.images[0] : article.imageUrl} alt={article.title} className="w-full h-full object-cover" />
+                    <img src={`${ASSETS}${article.images && article.images.length > 0 ? article.images[0] : article.imageUrl}`} alt={article.title} className="w-full h-full object-cover" />
                   </div>
                 ) : null}
                 <div className="p-6">
