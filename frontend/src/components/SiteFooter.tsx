@@ -19,22 +19,28 @@ const SiteFooter = () => {
           <ul className="space-y-2 text-sm">
             <li><Link className="text-white/90 hover:text-white hover:underline" to="/symptom-checker">AI Symptom Checker</Link></li>
             <li><Link className="text-white/90 hover:text-white hover:underline" to="/vets">Find a Veterinarian</Link></li>
+            <li><Link className="text-white/90 hover:text-white hover:underline" to="/book-appointment">Book Appointment</Link></li>
             <li><Link className="text-white/90 hover:text-white hover:underline" to="/pet-records">Pet Profiles & Records</Link></li>
             <li><Link className="text-white/90 hover:text-white hover:underline" to="/resources">Learning Resources</Link></li>
+            <li><Link className="text-white/90 hover:text-white hover:underline" to="/about">About Us</Link></li>
+            <li><Link className="text-white/90 hover:text-white hover:underline" to="/faq">FAQ/Help Center</Link></li>
           </ul>
         </div>
         <div>
-          <h4 className="mb-3 font-semibold text-white">For Clinics</h4>
+          <h4 className="mb-3 font-semibold text-white">Legal</h4>
           <ul className="space-y-2 text-sm">
-            <li><Link className="text-white/90 hover:text-white hover:underline" to="/vet-dashboard">Clinic Dashboard</Link></li>
-            <li><Link className="text-white/90 hover:text-white hover:underline" to="/">Getting Started</Link></li>
+            <li><Link className="text-white/90 hover:text-white hover:underline" to="/privacy">Privacy Policy</Link></li>
+            <li><Link className="text-white/90 hover:text-white hover:underline" to="/terms">Terms of Service</Link></li>
+            <li><Link className="text-white/90 hover:text-white hover:underline" to="/cookies">Cookie Policy</Link></li>
+            <li><Link className="text-white/90 hover:text-white hover:underline" to="/accessibility">Accessibility Statement</Link></li>
           </ul>
         </div>
         <div>
           <h4 className="mb-3 font-semibold text-white">Contact</h4>
           <ul className="space-y-2 text-sm text-white/90">
             <li>Email: hello@happytails.app</li>
-            <li>Website: HappyTails</li>
+            <li>Phone: +94 11 123 4567</li>
+            <li>Address: 123 Pet Care Lane, Colombo 00500, Sri Lanka</li>
           </ul>
         </div>
       </div>

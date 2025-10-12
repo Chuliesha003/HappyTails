@@ -20,6 +20,11 @@ import BookAppointment from "./pages/BookAppointment";
 import SiteHeader from "./components/SiteHeader";
 import SiteFooter from "./components/SiteFooter";
 import SymptomCheckerPage from "./pages/SymptomChecker";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import Cookies from "./pages/Cookies";
+import Accessibility from "./pages/Accessibility";
+import FAQ from "./pages/FAQ";
 import { withAuth } from "./components/withAuth";
 import { withRole } from "./components/withRole";
 import ScrollToTop from "./components/ui/scroll-to-top";
@@ -45,9 +50,14 @@ const AppContent = () => {
         <Route path="/about" element={<About />} />
         <Route path="/login" element={<Login />} />
         <Route path="/get-started" element={<GetStarted />} />
-  <Route path="/symptom-checker" element={<SymptomCheckerPage />} />
+        <Route path="/symptom-checker" element={<SymptomCheckerPage />} />
         <Route path="/vets" element={<Vets />} />
         <Route path="/resources" element={<Resources />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/cookies" element={<Cookies />} />
+        <Route path="/accessibility" element={<Accessibility />} />
+        <Route path="/faq" element={<FAQ />} />
         
         {/* Protected routes - require authentication */}
         <Route path="/pet-records" element={<ProtectedPetRecords />} />
