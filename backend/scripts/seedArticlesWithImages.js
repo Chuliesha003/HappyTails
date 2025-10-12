@@ -61,7 +61,7 @@ const articleDataPool = {
     },
     {
       title: 'The Importance of Omega Fatty Acids for Pets',
-      image: 'backend/public/uploads/articles/nutrition-7.jpg',
+      image: 'backend/public/uploads/articles/dog omega 7.jpg',
       content: `Omega-3 and Omega-6 fatty acids are crucial for your pet's skin, coat, joint health, and cognitive function. This article explains the benefits of these essential fats, the best food sources (like fish oil), and how to choose the right supplement for your dog or cat.`
     },
     {
@@ -73,42 +73,42 @@ const articleDataPool = {
   diseases: [
     {
       title: 'Recognizing the Early Signs of Kidney Disease in Cats',
-      image: 'backend/public/uploads/articles/diseases-1.jpg',
+      image: 'backend/public/uploads/articles/disease-1.jpg',
       content: `Chronic kidney disease is a common ailment in older cats. Early detection is key to managing the condition and improving your cat's quality of life. This article details the subtle early signs, such as increased thirst and urination, weight loss, and decreased appetite, and explains the importance of regular vet check-ups.`
     },
     {
       title: 'Canine Arthritis: Management and Pain Relief',
-      image: 'backend/public/uploads/articles/diseases-2.jpg',
+      image: 'backend/public/uploads/articles/disease-2.jpg',
       content: `Arthritis can significantly impact a dog's mobility and comfort. Learn to spot the signs of joint pain and explore the various management options available, from weight management and physical therapy to medications and supplements like glucosamine. Help your senior dog stay active and comfortable.`
     },
     {
       title: 'Understanding and Preventing Pet Diabetes',
-      image: 'backend/public/uploads/articles/diseases-3.jpg',
+      image: 'backend/public/uploads/articles/disease-3.jpg',
       content: `Diabetes is becoming more common in both dogs and cats. This guide explains the causes, symptoms, and treatment of pet diabetes. Learn about the role of diet, exercise, and insulin therapy in managing the disease and how you can help prevent it in your pet.`
     },
     {
       title: 'Dealing with Fleas and Ticks: A Pet Owner’s Guide',
-      image: 'backend/public/uploads/articles/diseases-4.jpg',
+      image: 'backend/public/uploads/articles/disease-4.jpg',
       content: `Fleas and ticks are more than just a nuisance; they can transmit serious diseases. This article covers the best methods for prevention and treatment, comparing spot-on treatments, oral medications, and collars. Learn how to check your pet for parasites and keep your home pest-free.`
     },
     {
       title: 'Common Skin Problems in Dogs and How to Treat Them',
-      image: 'backend/public/uploads/articles/diseases-5.jpg',
+      image: 'backend/public/uploads/articles/disease-5.jpg',
       content: `From allergies and hot spots to infections and parasites, skin issues are a frequent reason for vet visits. This guide helps you identify common skin problems in dogs, understand their underlying causes, and learn about effective treatments to provide your pet with much-needed relief.`
     },
     {
       title: 'Feline Lower Urinary Tract Disease (FLUTD)',
-      image: 'backend/public/uploads/articles/diseases-6.jpg',
+      image: 'backend/public/uploads/articles/disease-6.jpg',
       content: `FLUTD is a term for a range of problems affecting a cat's bladder and urethra. Symptoms can include straining to urinate, blood in the urine, and urinating outside the litter box. This article explores the causes, diagnosis, and management strategies, emphasizing the importance of diet and stress reduction.`
     },
     {
       title: 'Dental Health for Pets: More Than Just Bad Breath',
-      image: 'backend/public/uploads/articles/diseases-7.jpg',
+      image: 'backend/public/uploads/articles/disease-7.jpg',
       content: `Dental disease is incredibly common in pets and can lead to serious health issues. Learn why professional cleanings are important, how to brush your pet's teeth at home, and what dental chews and toys can help maintain good oral hygiene between vet visits.`
     },
     {
       title: 'Kennel Cough in Dogs: Symptoms, Treatment, and Prevention',
-      image: 'backend/public/uploads/articles/diseases-8.jpg',
+      image: 'backend/public/uploads/articles/disease-8.jpg',
       content: `Kennel cough is a highly contagious respiratory infection. This guide covers its characteristic hacking cough, other symptoms, and typical treatment protocols. We also discuss the Bordetella vaccine and how you can protect your dog, especially if they frequent social settings like dog parks or boarding kennels.`
     }
   ],
@@ -324,15 +324,7 @@ const seed = async () => {
         }
 
         const author = randomItem(createdAuthors);
-        const { title, content } = articleDetail;
-        // Normalize image path: allow absolute web paths, http(s) URLs, or filesystem paths
-        let image = articleDetail.image || '';
-        if (image && !/^https?:\/\//i.test(image) && !image.startsWith('/')) {
-          // Convert backslashes to forward slashes, strip leading backend/public if present
-          image = image.replace(/\\\\/g, '/').replace(/\\/g, '/');
-          image = image.replace(/^\.?\/*backend\/public/, '');
-          if (!image.startsWith('/')) image = '/' + image;
-        }
+        const { title, content, image } = articleDetail;
 
         const newArticle = new Article({
           title,
