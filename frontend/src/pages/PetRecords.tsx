@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
-import { Edit, Plus, Trash2, AlertCircle, Loader2 } from "lucide-react";
+import { Edit, Plus, Trash2, AlertCircle, Loader2, X, FileText, Syringe, Pill, ChevronUp, Upload, File, Image, Download } from "lucide-react";
 import { petsService } from "@/services/pets";
 import { toast } from "@/hooks/use-toast";
-import type { Pet } from "@/types/api";
+import type { Pet, MedicalRecord, Vaccination, Medication, Document } from "@/types/api";
 
 interface FormData {
   name: string;
@@ -23,6 +25,12 @@ interface FormData {
   color: string;
   medicalHistory: string;
   allergies: string;
+  // New medical fields
+  medicalRecords: MedicalRecord[];
+  vaccinations: Vaccination[];
+  medications: Medication[];
+  documents: Document[];
+  specialNeeds: string;
 }
 
 const PetRecords = () => {
@@ -31,6 +39,20 @@ const PetRecords = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Medical form states
+  const [showMedicalForm, setShowMedicalForm] = useState(false);
+  const [showVaccinationForm, setShowVaccinationForm] = useState(false);
+  const [showMedicationForm, setShowMedicationForm] = useState(false);
+  
+  const [currentMedicalRecord, setCurrentMedicalRecord] = useState<MedicalRecord | null>(null);
+  const [currentVaccination, setCurrentVaccination] = useState<Vaccination | null>(null);
+  const [currentMedication, setCurrentMedication] = useState<Medication | null>(null);
+  
+  // File upload states
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  
   const [formData, setFormData] = useState<FormData>({
     name: "",
     breed: "",
@@ -40,7 +62,12 @@ const PetRecords = () => {
     species: "",
     color: "",
     medicalHistory: "",
-    allergies: ""
+    allergies: "",
+    medicalRecords: [],
+    vaccinations: [],
+    medications: [],
+    documents: [],
+    specialNeeds: ""
   });
 
   // Load pets from backend on mount
@@ -84,7 +111,12 @@ const PetRecords = () => {
       species: "",
       color: "",
       medicalHistory: "",
-      allergies: ""
+      allergies: "",
+      medicalRecords: [],
+      vaccinations: [],
+      medications: [],
+      documents: [],
+      specialNeeds: ""
     });
     setEditingPetId(null);
     setError(null); // Clear any error messages
@@ -121,8 +153,11 @@ const PetRecords = () => {
         weight: Number(formData.weight),
         gender: genderNormalized as 'Male' | 'Female' | 'Unknown',
         color: formData.color?.trim() || undefined,
-        // Do not send medicalHistory in create (schema expects subdocs); can be added later via specific endpoints
         allergies: allergiesArray.length ? allergiesArray : undefined,
+        medicalRecords: formData.medicalRecords.length ? formData.medicalRecords : undefined,
+        vaccinations: formData.vaccinations.length ? formData.vaccinations : undefined,
+        medications: formData.medications.length ? formData.medications : undefined,
+        specialNeeds: formData.specialNeeds?.trim() || undefined,
       };
 
       if (editingPetId) {
@@ -170,11 +205,16 @@ const PetRecords = () => {
       breed: pet.breed,
       age: String(pet.age),
       weight: String(pet.weight),
-  gender: (pet.gender || '').toLowerCase(),
+      gender: (pet.gender || '').toLowerCase(),
       species: pet.species,
       color: pet.color || '',
       medicalHistory: '',
-      allergies: Array.isArray(pet.allergies) ? pet.allergies.join(', ') : (pet.allergies as unknown as string) || ''
+      allergies: Array.isArray(pet.allergies) ? pet.allergies.join(', ') : (pet.allergies as unknown as string) || '',
+      medicalRecords: pet.medicalHistory || [],
+      vaccinations: pet.vaccinations || [],
+      medications: pet.medications || [],
+      documents: pet.documents || [],
+      specialNeeds: pet.specialNeeds || ''
     });
     setEditingPetId(pet.id);
   };
@@ -202,6 +242,217 @@ const PetRecords = () => {
   };
 
   const handleCancelEdit = () => resetForm();
+
+  // Medical record management functions
+  const handleAddMedicalRecord = () => {
+    setCurrentMedicalRecord({
+      date: new Date().toISOString().split('T')[0],
+      condition: '',
+      diagnosis: '',
+      treatment: '',
+      veterinarian: '',
+      notes: ''
+    });
+    setShowMedicalForm(true);
+  };
+
+  const handleEditMedicalRecord = (record: MedicalRecord) => {
+    setCurrentMedicalRecord(record);
+    setShowMedicalForm(true);
+  };
+
+  const handleSaveMedicalRecord = () => {
+    if (!currentMedicalRecord) return;
+    
+    const updatedRecords = [...formData.medicalRecords];
+    const existingIndex = updatedRecords.findIndex(r => r === currentMedicalRecord);
+    
+    if (existingIndex >= 0) {
+      updatedRecords[existingIndex] = currentMedicalRecord;
+    } else {
+      updatedRecords.push(currentMedicalRecord);
+    }
+    
+    setFormData(prev => ({ ...prev, medicalRecords: updatedRecords }));
+    setCurrentMedicalRecord(null);
+    setShowMedicalForm(false);
+  };
+
+  const handleDeleteMedicalRecord = (index: number) => {
+    const updatedRecords = formData.medicalRecords.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, medicalRecords: updatedRecords }));
+  };
+
+  // Vaccination management functions
+  const handleAddVaccination = () => {
+    setCurrentVaccination({
+      name: '',
+      date: new Date().toISOString().split('T')[0],
+      nextDueDate: '',
+      administeredBy: '',
+      notes: ''
+    });
+    setShowVaccinationForm(true);
+  };
+
+  const handleEditVaccination = (vaccination: Vaccination) => {
+    setCurrentVaccination(vaccination);
+    setShowVaccinationForm(true);
+  };
+
+  const handleSaveVaccination = () => {
+    if (!currentVaccination) return;
+    
+    const updatedVaccinations = [...formData.vaccinations];
+    const existingIndex = updatedVaccinations.findIndex(v => v === currentVaccination);
+    
+    if (existingIndex >= 0) {
+      updatedVaccinations[existingIndex] = currentVaccination;
+    } else {
+      updatedVaccinations.push(currentVaccination);
+    }
+    
+    setFormData(prev => ({ ...prev, vaccinations: updatedVaccinations }));
+    setCurrentVaccination(null);
+    setShowVaccinationForm(false);
+  };
+
+  const handleDeleteVaccination = (index: number) => {
+    const updatedVaccinations = formData.vaccinations.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, vaccinations: updatedVaccinations }));
+  };
+
+  // Medication management functions
+  const handleAddMedication = () => {
+    setCurrentMedication({
+      name: '',
+      dosage: '',
+      frequency: '',
+      duration: '',
+      notes: ''
+    });
+    setShowMedicationForm(true);
+  };
+
+  const handleEditMedication = (medication: Medication) => {
+    setCurrentMedication(medication);
+    setShowMedicationForm(true);
+  };
+
+  const handleSaveMedication = () => {
+    if (!currentMedication) return;
+    
+    const updatedMedications = [...formData.medications];
+    const existingIndex = updatedMedications.findIndex(m => m === currentMedication);
+    
+    if (existingIndex >= 0) {
+      updatedMedications[existingIndex] = currentMedication;
+    } else {
+      updatedMedications.push(currentMedication);
+    }
+    
+    setFormData(prev => ({ ...prev, medications: updatedMedications }));
+    setCurrentMedication(null);
+    setShowMedicationForm(false);
+  };
+
+  const handleDeleteMedication = (index: number) => {
+    const updatedMedications = formData.medications.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, medications: updatedMedications }));
+  };
+
+  // File upload functions
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload PDF or image files only.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload files smaller than 10MB.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      formDataUpload.append('documentType', 'other'); // Default type, can be changed later
+
+      // Upload file to backend
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formDataUpload,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const result = await response.json();
+
+      // Add document to form data
+      const newDocument: Document = {
+        fileName: file.name,
+        filePath: result.filePath,
+        fileType: file.type.startsWith('image/') ? 'image' : 'pdf',
+        documentType: 'other',
+        description: '',
+        uploadedAt: new Date().toISOString()
+      };
+
+      setFormData(prev => ({
+        ...prev,
+        documents: [...prev.documents, newDocument]
+      }));
+
+      toast({
+        title: "File uploaded successfully",
+        description: `${file.name} has been uploaded.`,
+      });
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload file. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+      // Reset file input
+      event.target.value = '';
+    }
+  };
+
+  const handleDeleteDocument = (index: number) => {
+    const updatedDocuments = formData.documents.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, documents: updatedDocuments }));
+  };
+
+  const handleDownloadDocument = (document: Document) => {
+    window.open(document.filePath, '_blank');
+  };
 
   return (
     <div className="container mx-auto px-4 md:px-6 py-10 space-y-8">
@@ -274,13 +525,6 @@ const PetRecords = () => {
                   <option value="">Select Species</option>
                   <option value="Dog">Dog</option>
                   <option value="Cat">Cat</option>
-                  <option value="Bird">Bird</option>
-                  <option value="Rabbit">Rabbit</option>
-                  <option value="Hamster">Hamster</option>
-                  <option value="Guinea Pig">Guinea Pig</option>
-                  <option value="Fish">Fish</option>
-                  <option value="Reptile">Reptile</option>
-                  <option value="Other">Other</option>
                 </select>
               </div>
               
@@ -320,7 +564,7 @@ const PetRecords = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="weight">Weight (lbs) *</Label>
+                <Label htmlFor="weight">Weight (kg) *</Label>
                 <Input
                   id="weight"
                   type="number"
@@ -387,6 +631,580 @@ const PetRecords = () => {
           </form>
         </CardContent>
       </Card>
+
+      {/* Medical Records Section */}
+      {editingPetId && (
+        <Card className="max-w-3xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Medical Records
+              </span>
+              <Button type="button" size="sm" onClick={handleAddMedicalRecord}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Record
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {formData.medicalRecords.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">
+                No medical records added yet.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {formData.medicalRecords.map((record, index) => (
+                  <Card key={index} className="border-l-4 border-l-blue-500">
+                    <CardContent className="pt-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold">{record.condition}</h4>
+                            <span className="text-sm text-muted-foreground">
+                              {record.date ? new Date(record.date).toLocaleDateString() : ''}
+                            </span>
+                          </div>
+                          {record.diagnosis && (
+                            <p className="text-sm">
+                              <span className="font-medium">Diagnosis:</span> {record.diagnosis}
+                            </p>
+                          )}
+                          {record.treatment && (
+                            <p className="text-sm">
+                              <span className="font-medium">Treatment:</span> {record.treatment}
+                            </p>
+                          )}
+                          {record.veterinarian && (
+                            <p className="text-sm">
+                              <span className="font-medium">Veterinarian:</span> {record.veterinarian}
+                            </p>
+                          )}
+                          {record.notes && (
+                            <p className="text-sm">
+                              <span className="font-medium">Notes:</span> {record.notes}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditMedicalRecord(record)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteMedicalRecord(index)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Vaccinations Section */}
+      {editingPetId && (
+        <Card className="max-w-3xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Syringe className="h-5 w-5" />
+                Vaccinations
+              </span>
+              <Button type="button" size="sm" onClick={handleAddVaccination}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Vaccination
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {formData.vaccinations.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">
+                No vaccinations added yet.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {formData.vaccinations.map((vaccination, index) => (
+                  <Card key={index} className="border-l-4 border-l-green-500">
+                    <CardContent className="pt-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold">{vaccination.name}</h4>
+                            <span className="text-sm text-muted-foreground">
+                              {vaccination.date ? new Date(vaccination.date).toLocaleDateString() : ''}
+                            </span>
+                          </div>
+                          {vaccination.nextDueDate && (
+                            <p className="text-sm">
+                              <span className="font-medium">Next Due:</span> {new Date(vaccination.nextDueDate).toLocaleDateString()}
+                            </p>
+                          )}
+                          {vaccination.administeredBy && (
+                            <p className="text-sm">
+                              <span className="font-medium">Administered by:</span> {vaccination.administeredBy}
+                            </p>
+                          )}
+                          {vaccination.notes && (
+                            <p className="text-sm">
+                              <span className="font-medium">Notes:</span> {vaccination.notes}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditVaccination(vaccination)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteVaccination(index)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Medications Section */}
+      {editingPetId && (
+        <Card className="max-w-3xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Pill className="h-5 w-5" />
+                Medications
+              </span>
+              <Button type="button" size="sm" onClick={handleAddMedication}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Medication
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {formData.medications.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">
+                No medications added yet.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {formData.medications.map((medication, index) => (
+                  <Card key={index} className="border-l-4 border-l-purple-500">
+                    <CardContent className="pt-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 space-y-2">
+                          <h4 className="font-semibold">{medication.name}</h4>
+                          {medication.dosage && (
+                            <p className="text-sm">
+                              <span className="font-medium">Dosage:</span> {medication.dosage}
+                            </p>
+                          )}
+                          {medication.frequency && (
+                            <p className="text-sm">
+                              <span className="font-medium">Frequency:</span> {medication.frequency}
+                            </p>
+                          )}
+                          {medication.duration && (
+                            <p className="text-sm">
+                              <span className="font-medium">Duration:</span> {medication.duration}
+                            </p>
+                          )}
+                          {medication.notes && (
+                            <p className="text-sm">
+                              <span className="font-medium">Notes:</span> {medication.notes}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditMedication(medication)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteMedication(index)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Documents Section */}
+      {editingPetId && (
+        <Card className="max-w-3xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <File className="h-5 w-5" />
+                Documents & Files
+              </span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  id="file-upload"
+                  className="hidden"
+                  accept=".pdf,image/*"
+                  onChange={handleFileUpload}
+                  disabled={isUploading}
+                />
+                <Label htmlFor="file-upload" className="cursor-pointer">
+                  <Button type="button" size="sm" disabled={isUploading} asChild>
+                    <span>
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload File
+                        </>
+                      )}
+                    </span>
+                  </Button>
+                </Label>
+              </div>
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Upload vaccination certificates, medical reports, surgery records, prescriptions, and other important documents.
+            </p>
+          </CardHeader>
+          <CardContent>
+            {formData.documents.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <File className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No documents uploaded yet</p>
+                <p className="text-xs">Supported formats: PDF, JPG, PNG, GIF, WebP (max 10MB)</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {formData.documents.map((document, index) => (
+                  <Card key={index} className="border-l-4 border-l-blue-500">
+                    <CardContent className="pt-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2">
+                            {document.fileType === 'pdf' ? (
+                              <FileText className="h-5 w-5 text-red-500" />
+                            ) : (
+                              <Image className="h-5 w-5 text-green-500" />
+                            )}
+                            <h4 className="font-semibold">{document.fileName}</h4>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span>Type: {document.documentType.replace('_', ' ')}</span>
+                            {document.uploadedAt && (
+                              <span>Uploaded: {new Date(document.uploadedAt).toLocaleDateString()}</span>
+                            )}
+                          </div>
+                          {document.description && (
+                            <p className="text-sm">
+                              <span className="font-medium">Description:</span> {document.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDownloadDocument(document)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteDocument(index)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Medical Record Form Modal */}
+      {showMedicalForm && currentMedicalRecord && (
+        <Dialog open={showMedicalForm} onOpenChange={setShowMedicalForm}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {formData.medicalRecords.includes(currentMedicalRecord) ? 'Edit Medical Record' : 'Add Medical Record'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="medicalDate">Date *</Label>
+                <Input
+                  id="medicalDate"
+                  type="date"
+                  value={currentMedicalRecord.date}
+                  onChange={(e) => setCurrentMedicalRecord(prev => prev ? {...prev, date: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="condition">Condition *</Label>
+                <Input
+                  id="condition"
+                  type="text"
+                  placeholder="e.g., Ear infection, Broken leg"
+                  value={currentMedicalRecord.condition}
+                  onChange={(e) => setCurrentMedicalRecord(prev => prev ? {...prev, condition: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="diagnosis">Diagnosis</Label>
+                <Input
+                  id="diagnosis"
+                  type="text"
+                  placeholder="Veterinarian's diagnosis"
+                  value={currentMedicalRecord.diagnosis}
+                  onChange={(e) => setCurrentMedicalRecord(prev => prev ? {...prev, diagnosis: e.target.value} : null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="treatment">Treatment</Label>
+                <Input
+                  id="treatment"
+                  type="text"
+                  placeholder="Prescribed treatment or procedure"
+                  value={currentMedicalRecord.treatment}
+                  onChange={(e) => setCurrentMedicalRecord(prev => prev ? {...prev, treatment: e.target.value} : null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="veterinarian">Veterinarian</Label>
+                <Input
+                  id="veterinarian"
+                  type="text"
+                  placeholder="Veterinarian name"
+                  value={currentMedicalRecord.veterinarian}
+                  onChange={(e) => setCurrentMedicalRecord(prev => prev ? {...prev, veterinarian: e.target.value} : null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="medicalNotes">Notes</Label>
+                <Textarea
+                  id="medicalNotes"
+                  placeholder="Additional notes or observations"
+                  value={currentMedicalRecord.notes}
+                  onChange={(e) => setCurrentMedicalRecord(prev => prev ? {...prev, notes: e.target.value} : null)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowMedicalForm(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleSaveMedicalRecord}>
+                Save Record
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Vaccination Form Modal */}
+      {showVaccinationForm && currentVaccination && (
+        <Dialog open={showVaccinationForm} onOpenChange={setShowVaccinationForm}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {formData.vaccinations.includes(currentVaccination) ? 'Edit Vaccination' : 'Add Vaccination'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="vaccinationName">Vaccine Name *</Label>
+                <Input
+                  id="vaccinationName"
+                  type="text"
+                  placeholder="e.g., Rabies, DHPP"
+                  value={currentVaccination.name}
+                  onChange={(e) => setCurrentVaccination(prev => prev ? {...prev, name: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vaccinationDate">Date Administered *</Label>
+                <Input
+                  id="vaccinationDate"
+                  type="date"
+                  value={currentVaccination.date}
+                  onChange={(e) => setCurrentVaccination(prev => prev ? {...prev, date: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nextDueDate">Next Due Date</Label>
+                <Input
+                  id="nextDueDate"
+                  type="date"
+                  value={currentVaccination.nextDueDate}
+                  onChange={(e) => setCurrentVaccination(prev => prev ? {...prev, nextDueDate: e.target.value} : null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="administeredBy">Administered By</Label>
+                <Input
+                  id="administeredBy"
+                  type="text"
+                  placeholder="Veterinarian or clinic name"
+                  value={currentVaccination.administeredBy}
+                  onChange={(e) => setCurrentVaccination(prev => prev ? {...prev, administeredBy: e.target.value} : null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vaccinationNotes">Notes</Label>
+                <Textarea
+                  id="vaccinationNotes"
+                  placeholder="Additional notes or side effects"
+                  value={currentVaccination.notes}
+                  onChange={(e) => setCurrentVaccination(prev => prev ? {...prev, notes: e.target.value} : null)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowVaccinationForm(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleSaveVaccination}>
+                Save Vaccination
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Medication Form Modal */}
+      {showMedicationForm && currentMedication && (
+        <Dialog open={showMedicationForm} onOpenChange={setShowMedicationForm}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {formData.medications.includes(currentMedication) ? 'Edit Medication' : 'Add Medication'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="medicationName">Medication Name *</Label>
+                <Input
+                  id="medicationName"
+                  type="text"
+                  placeholder="e.g., Heartgard, Antibiotics"
+                  value={currentMedication.name}
+                  onChange={(e) => setCurrentMedication(prev => prev ? {...prev, name: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dosage">Dosage</Label>
+                <Input
+                  id="dosage"
+                  type="text"
+                  placeholder="e.g., 10mg, 1 tablet"
+                  value={currentMedication.dosage}
+                  onChange={(e) => setCurrentMedication(prev => prev ? {...prev, dosage: e.target.value} : null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="frequency">Frequency</Label>
+                <Input
+                  id="frequency"
+                  type="text"
+                  placeholder="e.g., Once daily, Twice weekly"
+                  value={currentMedication.frequency}
+                  onChange={(e) => setCurrentMedication(prev => prev ? {...prev, frequency: e.target.value} : null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duration</Label>
+                <Input
+                  id="duration"
+                  type="text"
+                  placeholder="e.g., 7 days, Ongoing"
+                  value={currentMedication.duration}
+                  onChange={(e) => setCurrentMedication(prev => prev ? {...prev, duration: e.target.value} : null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="medicationNotes">Notes</Label>
+                <Textarea
+                  id="medicationNotes"
+                  placeholder="Instructions, side effects, or other notes"
+                  value={currentMedication.notes}
+                  onChange={(e) => setCurrentMedication(prev => prev ? {...prev, notes: e.target.value} : null)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowMedicationForm(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleSaveMedication}>
+                Save Medication
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Loading Skeleton */}
       {isLoading && (
@@ -465,7 +1283,7 @@ const PetRecords = () => {
                     </div>
                     <div>
                       <span className="text-muted-foreground">Weight:</span>
-                      <div className="font-medium">{pet.weight} lbs</div>
+                      <div className="font-medium">{pet.weight} kg</div>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Gender:</span>

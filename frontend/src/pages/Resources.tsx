@@ -7,13 +7,54 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useCallback } from "react";
 import { Search, BookOpen, AlertCircle, Calendar, User, Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react";
-import { resolveArticleImage } from "@/lib/assets";
 import { resourcesService } from "@/services/resources";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import ArticleForm from "@/components/ArticleForm";
-import type { Article } from "@/types/api";
 import ArticleModal from "@/components/ArticleModal";
+import type { Article } from "@/types/api";
+import { resolveArticleImage } from '@/lib/assets';
+
+const FALLBACK_DATA_URI =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'>
+       <rect width='100%' height='100%' fill='#f3f4f6'/>
+       <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle'
+             font-family='Inter,system-ui,sans-serif' font-size='28' fill='#9ca3af'>
+         Image unavailable
+       </text>
+     </svg>`
+  );
+
+function SafeImg({
+  src,
+  alt,
+  className,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+}) {
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      loading="lazy"
+      // ❗ prevent endless onError loops
+      onError={(e) => {
+        const img = e.currentTarget as HTMLImageElement;
+        if (img.dataset.fallbackApplied === 'true') return;
+        img.dataset.fallbackApplied = 'true';
+        img.src = FALLBACK_DATA_URI;       // guaranteed to load
+      }}
+      // Optional: ensure the browser doesn't block it for CORS
+      crossOrigin="anonymous"
+      referrerPolicy="no-referrer"
+    />
+  );
+}
 
 const Resources = () => {
   const { user, isAdmin } = useAuth();
@@ -204,13 +245,20 @@ const Resources = () => {
           </Card>
         ) : (
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {filteredArticles.map((article) => (
-              <article key={article.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
-                {(article.images && article.images.length > 0) || article.imageUrl ? (
-                  <div className="w-full h-48 overflow-hidden">
-                    <img src={resolveArticleImage(article.images && article.images.length > 0 ? article.images[0] : article.imageUrl)} alt={article.title} className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).src = resolveArticleImage('placeholder.jpg'); }} />
+            {filteredArticles.map((article) => {
+              const imgSrc = article.imageUrl
+                ? resolveArticleImage(article.imageUrl)
+                : resolveArticleImage(`${article.category}-${(article.id || article.title || '1').toString().length % 8 + 1}.jpg`);
+
+              return (
+                <article key={article.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+                  <div className="w-full h-48 bg-gray-100 overflow-hidden">
+                    <SafeImg
+                      src={imgSrc}
+                      alt={article.title}
+                      className="w-full h-48 object-cover"
+                    />
                   </div>
-                ) : null}
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{article.category}</span>
@@ -271,7 +319,8 @@ const Resources = () => {
                   )}
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
         )}
       </Tabs>

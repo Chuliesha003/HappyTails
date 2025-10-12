@@ -1051,13 +1051,6 @@ const AdminDashboard = () => {
                     <SelectItem value="all">All Species</SelectItem>
                     <SelectItem value="Dog">Dog</SelectItem>
                     <SelectItem value="Cat">Cat</SelectItem>
-                    <SelectItem value="Bird">Bird</SelectItem>
-                    <SelectItem value="Rabbit">Rabbit</SelectItem>
-                    <SelectItem value="Hamster">Hamster</SelectItem>
-                    <SelectItem value="Guinea Pig">Guinea Pig</SelectItem>
-                    <SelectItem value="Fish">Fish</SelectItem>
-                    <SelectItem value="Reptile">Reptile</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1566,13 +1559,6 @@ const AdminDashboard = () => {
                   <SelectContent>
                     <SelectItem value="Dog">Dog</SelectItem>
                     <SelectItem value="Cat">Cat</SelectItem>
-                    <SelectItem value="Bird">Bird</SelectItem>
-                    <SelectItem value="Rabbit">Rabbit</SelectItem>
-                    <SelectItem value="Hamster">Hamster</SelectItem>
-                    <SelectItem value="Guinea Pig">Guinea Pig</SelectItem>
-                    <SelectItem value="Fish">Fish</SelectItem>
-                    <SelectItem value="Reptile">Reptile</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
