@@ -21,6 +21,13 @@ router.get('/', searchLimiter, vetController.getAllVets);
 router.get('/nearby', searchLimiter, vetController.searchNearbyVets);
 
 /**
+ * GET /api/vets/google-nearby
+ * Server-side proxy to Google Places Nearby Search
+ * Query: latitude, longitude, radiusMeters
+ */
+router.get('/google-nearby', searchLimiter, vetController.searchNearbyVetsGoogle);
+
+/**
  * @route   GET /api/vets/specializations
  * @desc    Get list of all specializations (for filter dropdown)
  * @access  Public

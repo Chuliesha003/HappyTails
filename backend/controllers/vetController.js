@@ -1,409 +1,210 @@
+// controllers/vetController.js
 const Vet = require('../models/Vet');
-const User = require('../models/User');
 
-/**
- * Search for nearby vets based on geolocation
- */
-const searchNearbyVets = async (req, res) => {
+/* ---------------------- helpers ---------------------- */
+function pickNumber(...vals) {
+  for (const v of vals) {
+    const n = parseFloat(v);
+    if (!Number.isNaN(n)) return n;
+  }
+  return NaN;
+}
+function toSafe(v) {
+  return v.toSafeObject ? v.toSafeObject() : v;
+}
+
+/* ------------------ GET /api/vets -------------------- */
+async function getAllVets(req, res) {
   try {
-    const { latitude, longitude, maxDistance } = req.query;
+    const { city, specialization, search, verified } = req.query;
+    const filter = { isActive: true };
 
-    // Validate coordinates
-    if (!latitude || !longitude) {
-      return res.status(400).json({
-        success: false,
-        message: 'Latitude and longitude are required',
-      });
+    if (verified === 'true') filter.isVerified = true;
+    if (city) filter['location.city'] = new RegExp(city, 'i');
+    if (specialization) filter.specialization = { $in: [new RegExp(specialization, 'i')] };
+    if (search) filter.$text = { $search: search };
+
+    const vets = await Vet.find(filter).limit(100).sort({ rating: -1, createdAt: -1 });
+    res.json(vets.map(toSafe));
+  } catch (err) {
+    console.error('[VET_GET_ALL_ERROR]', err);
+    res.status(500).json({ error: 'Failed to fetch veterinarians' });
+  }
+}
+
+/* ------------- GET /api/vets/nearby ------------------ */
+/* Accepts BOTH:
+   - latitude, longitude, maxDistance (km)
+   - lat, lng, radius (km)
+*/
+async function searchNearbyVets(req, res) {
+  try {
+    const lat = pickNumber(req.query.latitude, req.query.lat);
+    const lng = pickNumber(req.query.longitude, req.query.lng);
+    const maxDistanceKm = pickNumber(req.query.maxDistance, req.query.radius) || 50;
+
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      return res.status(400).json({ error: 'Latitude/longitude required' });
     }
 
-    const lat = parseFloat(latitude);
-    const lng = parseFloat(longitude);
-    const maxDistanceKm = maxDistance ? parseFloat(maxDistance) : 50;
+    console.log(`[VET_NEARBY] lat=${lat}, lng=${lng}, radius=${maxDistanceKm}km`);
 
-    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid coordinates provided',
-      });
-    }
-
-    // Find nearby vets using geospatial query
+    // NOTE: Vet.findNearby expects (lng, lat, km)
     const vets = await Vet.findNearby(lng, lat, maxDistanceKm);
 
-    res.status(200).json({
-      success: true,
-      count: vets.length,
-      vets: vets.map((vet) => vet.toSafeObject()),
-      location: {
-        latitude: lat,
-        longitude: lng,
-        maxDistance: maxDistanceKm,
-      },
-    });
-  } catch (error) {
-    console.error('Search nearby vets error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to search nearby veterinarians',
-      error: error.message,
-    });
+    res.json(vets.map(toSafe));
+  } catch (err) {
+    console.error('[VET_NEARBY_ERROR]', err);
+    res.status(500).json({ error: 'Failed to search nearby veterinarians' });
   }
-};
+}
 
-/**
- * Get all vets with optional filters
- */
-const getAllVets = async (req, res) => {
+/* ------------- GET /api/vets/specializations --------- */
+async function getSpecializations(_req, res) {
   try {
-    const { city, specialization, search, sort = 'rating', page = 1, limit = 10 } = req.query;
-
-    let query = { isActive: true, isVerified: true };
-    let vets;
-
-    // Search by text
-    if (search) {
-      vets = await Vet.searchVets(search);
-    }
-    // Filter by city
-    else if (city) {
-      vets = await Vet.findByCity(city);
-    }
-    // Filter by specialization
-    else if (specialization) {
-      vets = await Vet.findBySpecialization(specialization);
-    }
-    // Get all vets
-    else {
-      const sortOptions = {};
-      if (sort === 'rating') sortOptions.rating = -1;
-      if (sort === 'name') sortOptions.name = 1;
-      if (sort === 'experience') sortOptions.yearsOfExperience = -1;
-      if (sort === 'fee') sortOptions.consultationFee = 1;
-
-      const skip = (page - 1) * limit;
-
-      vets = await Vet.find(query)
-        .sort(sortOptions)
-        .skip(skip)
-        .limit(parseInt(limit));
-
-      const total = await Vet.countDocuments(query);
-
-      return res.status(200).json({
-        success: true,
-        count: vets.length,
-        total,
-        page: parseInt(page),
-        pages: Math.ceil(total / limit),
-        vets: vets.map((vet) => vet.toSafeObject()),
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      count: vets.length,
-      vets: vets.map((vet) => vet.toSafeObject()),
-    });
-  } catch (error) {
-    console.error('Get all vets error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch veterinarians',
-      error: error.message,
-    });
+    const specs = await Vet.distinct('specialization', { isActive: true });
+    res.json(specs.filter(Boolean).sort());
+  } catch (err) {
+    console.error('[VET_SPECIALIZATIONS_ERROR]', err);
+    res.status(500).json({ error: 'Failed to load specializations' });
   }
-};
+}
 
-/**
- * Get a single vet by ID
- */
-const getVetById = async (req, res) => {
+/* ---------------- GET /api/vets/cities --------------- */
+async function getCities(_req, res) {
   try {
-    const { id } = req.params;
-
-    const vet = await Vet.findOne({ _id: id, isActive: true }).populate(
-      'reviews.user',
-      'fullName profileImage'
-    );
-
-    if (!vet) {
-      return res.status(404).json({
-        success: false,
-        message: 'Veterinarian not found',
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      vet: vet.toSafeObject(true), // Include reviews
-    });
-  } catch (error) {
-    console.error('Get vet by ID error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch veterinarian',
-      error: error.message,
-    });
+    const cities = await Vet.distinct('location.city', { isActive: true });
+    res.json({ cities: cities.filter(Boolean).sort() });
+  } catch (err) {
+    console.error('[VET_CITIES_ERROR]', err);
+    res.status(500).json({ error: 'Failed to load cities' });
   }
-};
+}
 
-/**
- * Create a new vet (admin only)
- */
-const createVet = async (req, res) => {
+/* ---------------- GET /api/vets/:id ------------------ */
+async function getVetById(req, res) {
   try {
-    const vetData = req.body;
+    const vet = await Vet.findById(req.params.id);
+    if (!vet) return res.status(404).json({ error: 'Veterinarian not found' });
+    res.json(vet.toSafeObject(true));
+  } catch (err) {
+    console.error('[VET_BY_ID_ERROR]', err);
+    res.status(500).json({ error: 'Failed to fetch veterinarian' });
+  }
+}
 
-    // Check if vet with email or license already exists
-    const existingVet = await Vet.findOne({
-      $or: [{ email: vetData.email }, { licenseNumber: vetData.licenseNumber }],
-    });
-
-    if (existingVet) {
-      return res.status(409).json({
-        success: false,
-        message: 'Veterinarian with this email or license number already exists',
-      });
-    }
-
-    const vet = new Vet(vetData);
+/* ---------------- POST /api/vets --------------------- */
+async function createVet(req, res) {
+  try {
+    const vet = new Vet(req.body);
     await vet.save();
-
-    res.status(201).json({
-      success: true,
-      message: 'Veterinarian created successfully',
-      vet: vet.toSafeObject(),
-    });
-  } catch (error) {
-    console.error('Create vet error:', error);
-
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: Object.values(error.errors).map((err) => err.message),
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create veterinarian',
-      error: error.message,
-    });
+    res.status(201).json(vet.toSafeObject());
+  } catch (err) {
+    console.error('[VET_CREATE_ERROR]', err);
+    res.status(400).json({ error: err.message });
   }
-};
+}
 
-/**
- * Update a vet (admin only)
- */
-const updateVet = async (req, res) => {
+/* ---------------- PUT /api/vets/:id ------------------ */
+async function updateVet(req, res) {
   try {
-    const { id } = req.params;
-    const updates = req.body;
-
-    // Prevent changing certain fields
-    delete updates.reviews;
-    delete updates.rating;
-    delete updates.reviewCount;
-
-    const vet = await Vet.findOne({ _id: id, isActive: true });
-
-    if (!vet) {
-      return res.status(404).json({
-        success: false,
-        message: 'Veterinarian not found',
-      });
-    }
-
-    // Update fields
-    Object.keys(updates).forEach((key) => {
-      vet[key] = updates[key];
-    });
-
-    await vet.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Veterinarian updated successfully',
-      vet: vet.toSafeObject(),
-    });
-  } catch (error) {
-    console.error('Update vet error:', error);
-
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: Object.values(error.errors).map((err) => err.message),
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update veterinarian',
-      error: error.message,
-    });
+    const vet = await Vet.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!vet) return res.status(404).json({ error: 'Veterinarian not found' });
+    res.json(vet.toSafeObject());
+  } catch (err) {
+    console.error('[VET_UPDATE_ERROR]', err);
+    res.status(500).json({ error: 'Failed to update veterinarian' });
   }
-};
+}
 
-/**
- * Delete a vet (admin only - soft delete)
- */
-const deleteVet = async (req, res) => {
+/* ------------- DELETE /api/vets/:id ------------------ */
+async function deleteVet(req, res) {
   try {
-    const { id } = req.params;
-
-    const vet = await Vet.findOne({ _id: id, isActive: true });
-
-    if (!vet) {
-      return res.status(404).json({
-        success: false,
-        message: 'Veterinarian not found',
-      });
-    }
-
-    // Soft delete
-    vet.isActive = false;
-    await vet.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Veterinarian deleted successfully',
-    });
-  } catch (error) {
-    console.error('Delete vet error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete veterinarian',
-      error: error.message,
-    });
+    const vet = await Vet.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
+    if (!vet) return res.status(404).json({ error: 'Veterinarian not found' });
+    res.json({ message: 'Veterinarian deactivated successfully' });
+  } catch (err) {
+    console.error('[VET_DELETE_ERROR]', err);
+    res.status(500).json({ error: 'Failed to delete veterinarian' });
   }
-};
+}
 
-/**
- * Add review to a vet
- */
-const addReview = async (req, res) => {
+/* ------------- POST /api/vets/:id/reviews ------------ */
+async function addReview(req, res) {
   try {
-    const { uid: firebaseUid } = req.user;
-    const { id } = req.params;
     const { rating, comment } = req.body;
+    const userId = req.user.id;
+    const vet = await Vet.findById(req.params.id);
+    if (!vet) return res.status(404).json({ error: 'Veterinarian not found' });
 
-    // Validate rating
-    if (!rating || rating < 1 || rating > 5) {
-      return res.status(400).json({
-        success: false,
-        message: 'Rating must be between 1 and 5',
-      });
-    }
-
-    // Find user
-    const user = await User.findByFirebaseUid(firebaseUid);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
-    }
-
-    // Find vet
-    const vet = await Vet.findOne({ _id: id, isActive: true });
-
-    if (!vet) {
-      return res.status(404).json({
-        success: false,
-        message: 'Veterinarian not found',
-      });
-    }
-
-    // Check if user already reviewed
-    const existingReview = vet.reviews.find(
-      (review) => review.user.toString() === user._id.toString()
-    );
-
-    if (existingReview) {
-      return res.status(409).json({
-        success: false,
-        message: 'You have already reviewed this veterinarian',
-      });
-    }
-
-    // Add review
-    await vet.addReview(user._id, rating, comment);
-
-    res.status(201).json({
-      success: true,
-      message: 'Review added successfully',
-      rating: vet.rating,
-      reviewCount: vet.reviewCount,
-    });
-  } catch (error) {
-    console.error('Add review error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to add review',
-      error: error.message,
-    });
+    await vet.addReview(userId, rating, comment);
+    res.json({ message: 'Review added successfully', vet: vet.toSafeObject(true) });
+  } catch (err) {
+    console.error('[VET_ADD_REVIEW_ERROR]', err);
+    res.status(500).json({ error: 'Failed to add review' });
   }
-};
+}
 
-/**
- * Get vet specializations (for filter dropdown)
- */
-const getSpecializations = async (req, res) => {
+/* ------------- GET /api/vets/google-nearby ------------- */
+async function searchNearbyVetsGoogle(req, res) {
   try {
-    const specializations = await Vet.distinct('specialization', {
-      isActive: true,
-      isVerified: true,
+    const lat = pickNumber(req.query.latitude, req.query.lat);
+    const lng = pickNumber(req.query.longitude, req.query.lng);
+    const radiusMeters = parseInt(req.query.radiusMeters || req.query.radius || '50000', 10);
+
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      return res.status(400).json({ error: 'Latitude/longitude required' });
+    }
+
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'Google Maps API key not configured on server' });
+
+    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radiusMeters}&type=veterinary_care&key=${apiKey}`;
+    const fetch = require('node-fetch');
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+      console.error('[GOOGLE_PLACES_ERROR]', data.status, data.error_message);
+      return res.status(502).json({ error: 'Google Places API error', details: data.error_message || data.status });
+    }
+
+    const vets = (data.results || []).map((place) => {
+      const lat = place.geometry?.location?.lat || 0;
+      const lng = place.geometry?.location?.lng || 0;
+      return {
+        id: place.place_id,
+        name: place.name,
+        phoneNumber: place.formatted_phone_number || null,
+        clinicName: place.name,
+        location: {
+          type: 'Point',
+          coordinates: [lng, lat],
+          address: place.vicinity || '',
+          city: (place.vicinity || '').split(',').pop()?.trim() || '',
+        },
+        address: place.vicinity || '',
+        rating: place.rating || 0,
+        isVerified: place.business_status === 'OPERATIONAL',
+      };
     });
 
-    res.status(200).json({
-      success: true,
-      specializations: specializations.sort(),
-    });
-  } catch (error) {
-    console.error('Get specializations error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch specializations',
-      error: error.message,
-    });
+    return res.json({ success: true, count: vets.length, vets });
+  } catch (err) {
+    console.error('[VET_GOOGLE_NEARBY_ERROR]', err);
+    return res.status(500).json({ error: 'Failed to fetch from Google Places' });
   }
-};
-
-/**
- * Get vet cities (for filter dropdown)
- */
-const getCities = async (req, res) => {
-  try {
-    const cities = await Vet.distinct('location.city', {
-      isActive: true,
-      isVerified: true,
-    });
-
-    res.status(200).json({
-      success: true,
-      cities: cities.sort(),
-    });
-  } catch (error) {
-    console.error('Get cities error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch cities',
-      error: error.message,
-    });
-  }
-};
+}
 
 module.exports = {
   getAllVets,
   searchNearbyVets,
+  getSpecializations,
+  getCities,
   getVetById,
   createVet,
   updateVet,
   deleteVet,
   addReview,
-  getSpecializations,
-  getCities,
+  searchNearbyVetsGoogle,
 };

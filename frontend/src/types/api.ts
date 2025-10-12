@@ -106,19 +106,29 @@ export interface Vet {
   name: string;
   email: string;
   phoneNumber: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
+  address?: string; // legacy client-side field; actual values live under location
+  city?: string;    // legacy; prefer location.city
+  state?: string;   // legacy; prefer location.state
+  zipCode?: string; // legacy; prefer location.zipCode
   clinicName?: string;
   licenseNumber?: string;
-  specialization?: string;
-  experience?: number;
-  verified: boolean;
+  specialization?: string | string[];
+  experience?: number; // legacy; prefer yearsOfExperience
+  yearsOfExperience?: number;
+  verified?: boolean;   // legacy; prefer isVerified
+  isVerified?: boolean;
+  reviewCount?: number;
+  rating?: number;
+  consultationFee?: number;
   active?: boolean;
   location?: {
     type: 'Point';
     coordinates: [number, number]; // [longitude, latitude]
+    address?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
   };
   createdAt?: string;
   updatedAt?: string;
@@ -140,8 +150,17 @@ export interface VetSearchParams {
   latitude?: number;
   longitude?: number;
   maxDistance?: number;
+  city?: string;
   specialization?: string;
   verified?: boolean;
+
+  // ✅ add this line to make it compatible with Record<string, unknown>
+  [key: string]: string | number | boolean | undefined;
+}
+
+
+export interface VetCitiesResponse {
+  cities: string[];
 }
 
 // Appointment Types

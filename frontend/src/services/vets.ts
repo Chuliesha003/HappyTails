@@ -1,15 +1,35 @@
 import api, { handleApiError } from '@/lib/api';
 import type { Vet, CreateVetRequest, VetSearchParams } from '@/types/api';
 
-// Vets Service
+// The wrapper may return either T directly or { vets: T } / { vet: T }.
+// These helpers unwrap both shapes without using `any`.
+
+function unwrapArray(res: unknown): Vet[] {
+  if (Array.isArray(res)) return res as Vet[];
+  if (res && typeof res === 'object' && 'vets' in (res as Record<string, unknown>)) {
+    const obj = res as { vets?: unknown };
+    if (Array.isArray(obj.vets)) return obj.vets as Vet[];
+  }
+  return [];
+}
+
+function unwrapOne(res: unknown): Vet {
+  if (res && typeof res === 'object' && 'vet' in (res as Record<string, unknown>)) {
+    const obj = res as { vet?: unknown };
+    return obj.vet as Vet;
+  }
+  return res as Vet;
+}
+
 export const vetsService = {
   /**
    * Get all vets with optional filters
    */
   getAllVets: async (params?: VetSearchParams): Promise<Vet[]> => {
     try {
-      const response = await api.get<{ vets: Vet[] }>('/vets', params as Record<string, unknown>);
-      return response.vets;
+      // IMPORTANT: pass plain params object; your wrapper will map to axios { params }
+      const res = await api.get('/vets', params);
+      return unwrapArray(res);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -17,21 +37,21 @@ export const vetsService = {
 
   /**
    * Search for nearby vets based on location
+   * Your backend accepts: latitude, longitude, maxDistance (km)
    */
   searchNearbyVets: async (
     latitude: number,
     longitude: number,
-    maxDistance?: number
+    maxDistance = 50
   ): Promise<Vet[]> => {
     try {
-      const params: VetSearchParams = {
+      // IMPORTANT: DO NOT wrap with { params: ... }
+      const res = await api.get('/vets/nearby', {
         latitude,
         longitude,
-        maxDistance: maxDistance || 50, // Default 50 miles
-      };
-      
-      const response = await api.get<{ vets: Vet[] }>('/vets/nearby', params as Record<string, unknown>);
-      return response.vets;
+        maxDistance,
+      });
+      return unwrapArray(res);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -42,8 +62,8 @@ export const vetsService = {
    */
   getVetById: async (id: string): Promise<Vet> => {
     try {
-      const response = await api.get<{ vet: Vet }>(`/vets/${id}`);
-      return response.vet;
+      const res = await api.get(`/vets/${id}`);
+      return unwrapOne(res);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -52,10 +72,10 @@ export const vetsService = {
   /**
    * Create a new vet (admin only)
    */
-  createVet: async (data: CreateVetRequest): Promise<Vet> => {
+  createVet: async (payload: CreateVetRequest): Promise<Vet> => {
     try {
-      const response = await api.post<{ vet: Vet }>('/vets', data);
-      return response.vet;
+      const res = await api.post('/vets', payload);
+      return unwrapOne(res);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -64,10 +84,10 @@ export const vetsService = {
   /**
    * Update a vet (admin only)
    */
-  updateVet: async (id: string, data: Partial<CreateVetRequest>): Promise<Vet> => {
+  updateVet: async (id: string, payload: Partial<CreateVetRequest>): Promise<Vet> => {
     try {
-      const response = await api.put<{ vet: Vet }>(`/vets/${id}`, data);
-      return response.vet;
+      const res = await api.put(`/vets/${id}`, payload);
+      return unwrapOne(res);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -89,8 +109,8 @@ export const vetsService = {
    */
   verifyVet: async (id: string): Promise<Vet> => {
     try {
-      const response = await api.patch<{ vet: Vet }>(`/vets/${id}/verify`, {});
-      return response.vet;
+      const res = await api.patch(`/vets/${id}/verify`, {});
+      return unwrapOne(res);
     } catch (error) {
       throw handleApiError(error);
     }

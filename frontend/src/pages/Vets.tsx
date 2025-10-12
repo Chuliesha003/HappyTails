@@ -10,8 +10,9 @@ import { Star, MapPin, Phone, Clock, Navigation, Search, AlertCircle, CheckCircl
 import { useSearchParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { vetsService } from "@/services/vets";
+import { searchNearbyVetsFromGoogle } from "@/services/googlePlaces";
 import type { Vet } from "@/types/api";
-import LeafletMap from "@/components/LeafletMap";
+import VetGoogleMap from "@/components/VetGoogleMap";
 
 const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
   const R = 6371; // Earth's radius in km
@@ -35,7 +36,7 @@ const Vets = () => {
   const [isLoadingVets, setIsLoadingVets] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get user's current location and fetch nearby vets
+  // Get user's current location and fetch nearby vets automatically
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -49,52 +50,67 @@ const Vets = () => {
           setIsLoadingVets(true);
           setError(null);
           
+          // 1) Reverse geocode (best-effort). This should never block vet loading.
+          let cityName: string | null = null;
           try {
-            // Try to get address from coordinates using reverse geocoding
             const addressResponse = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${location.lat}&longitude=${location.lng}&localityLanguage=en`);
             const addressData = await addressResponse.json();
-            const address = addressData.city && addressData.countryName ? `${addressData.city}, ${addressData.countryName}` : 'Unknown location';
-            
-            setUserLocation(prev => ({
-              ...prev!,
-              address
-            }));
-            
-            toast({
-              title: "📍 Location detected",
-              description: `Found you at ${address}. Searching for nearby veterinarians...`
-            });
+            cityName = addressData.city || addressData.locality || addressData.principalSubdivision || null;
+            const address = cityName && addressData.countryName ? `${cityName}, ${addressData.countryName}` : (addressData.city || 'Location detected');
+            setUserLocation(prev => ({ ...prev!, address }));
+            toast({ title: "📍 Location detected", description: `Found you at ${address}. Searching for vets...` });
+          } catch (geoErr) {
+            console.warn('Reverse geocoding failed; proceeding with nearby search', geoErr);
+            setUserLocation(prev => ({ ...prev!, address: 'Location detected' }));
+          }
 
-            // Fetch nearby vets from backend
-            const vetsList = await vetsService.searchNearbyVets(location.lat, location.lng, 50);
+          // 2) Load vets from Google Places API (always runs, independent of reverse geocode success)
+          try {
+            let vetsList: Vet[] = [];
+            
+            // Use Google Places API to find real veterinary clinics near the user
+            console.log(`[VET_FETCH] 1. Searching for real vets near: lat=${location.lat}, lng=${location.lng}`);
+            vetsList = await searchNearbyVetsFromGoogle(location.lat, location.lng, 50000); // 50km in meters
+            console.log(`[VET_FETCH] 2. Found ${vetsList.length} real veterinary clinics from Google Places`);
+            
+            // If no vets within 50km, try 100km
+            if (!vetsList || vetsList.length === 0) {
+              console.log('[VET_FETCH] 3. No vets in 50km, expanding search to 100km...');
+              vetsList = await searchNearbyVetsFromGoogle(location.lat, location.lng, 100000); // 100km
+              console.log(`[VET_FETCH] 4. Expanded search found ${vetsList.length} vets`);
+            }
+            
+            // Last resort: use database vets if Google API fails
+            if (!vetsList || vetsList.length === 0) {
+              console.log('[VET_FETCH] 5. Google Places returned no results, falling back to database vets');
+              vetsList = await vetsService.searchNearbyVets(location.lat, location.lng, 100);
+              console.log(`[VET_FETCH] 6. Database fallback found ${vetsList.length} vets`);
+            }
+
+            console.log('[VET_FETCH] 7. Final vet list to be rendered:', vetsList.map(v => ({ name: v.name, city: v.city, coords: v.location?.coordinates })));
             setVets(vetsList);
             
-            toast({
-              title: "🏥 Vets found", 
-              description: `Found ${vetsList.length} veterinarian${vetsList.length !== 1 ? 's' : ''} near you`
-            });
+            const distanceMsg = vetsList.length > 0 && cityName 
+              ? `Found ${vetsList.length} vet${vetsList.length !== 1 ? 's' : ''} near ${cityName}`
+              : `Found ${vetsList.length} vet${vetsList.length !== 1 ? 's' : ''} nearby`;
+            toast({ title: "🏥 Vets found", description: distanceMsg });
           } catch (error) {
-            console.error('Error fetching data:', error);
+            console.error('[VET_FETCH] Error fetching vets:', error);
             setError('Failed to fetch veterinarians. Please try again.');
-            setUserLocation(prev => ({ ...prev!, address: 'Location detected' }));
-            
-            toast({
-              title: "Error",
-              description: "Failed to fetch veterinarians. Please try again.",
-              variant: "destructive"
-            });
+            toast({ title: "Error", description: "Failed to fetch veterinarians. Please try again.", variant: "destructive" });
           } finally {
             setIsLoadingVets(false);
           }
         },
         async (error) => {
-          console.error("Location error:", error);
+          console.error("[VET_FETCH] Geolocation error:", error);
           setLocationError("Unable to access your location. Showing all available vets.");
           
           // Default to fetching all vets without location
           setIsLoadingVets(true);
           
           try {
+            console.log('[VET_FETCH] Geolocation failed. Fetching all vets as fallback.');
             const vetsList = await vetsService.getAllVets();
             setVets(vetsList);
             
@@ -128,18 +144,19 @@ const Vets = () => {
 
   const filtered = useMemo(() => {
     if (!searchTerm) return vets;
+    const term = searchTerm.toLowerCase();
     return vets.filter(vet => {
-      const vetLocation = vet.location;
-      const address = vet.address || '';
-      const city = vet.city || '';
-      const specialization = Array.isArray(vet.specialization) 
-        ? vet.specialization.join(' ') 
-        : vet.specialization || '';
-      
-      return vet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        specialization.toLowerCase().includes(searchTerm.toLowerCase());
+      const address = (vet.location?.address || vet.address || '').toLowerCase();
+      const city = (vet.location?.city || vet.city || '').toLowerCase();
+      const spec = Array.isArray(vet.specialization)
+        ? vet.specialization.join(' ').toLowerCase()
+        : (vet.specialization || '').toLowerCase();
+      return (
+        vet.name.toLowerCase().includes(term) ||
+        address.includes(term) ||
+        city.includes(term) ||
+        spec.includes(term)
+      );
     });
   }, [vets, searchTerm]);
 
@@ -180,9 +197,8 @@ const Vets = () => {
               <Card className="h-full shadow-sm border border-purple-100">
                 <CardContent className="p-0">
                   <div className="relative w-full overflow-hidden rounded-xl h-[620px]">
-                    {/* Leaflet map showing ONLY our vet data from database - NO API KEY NEEDED */}
-                    <LeafletMap 
-                      vets={filtered}
+                    <VetGoogleMap 
+                      vets={vets}
                       userLocation={userLocation || undefined}
                       onVetClick={(vet) => setSelected(vet)}
                     />
@@ -229,15 +245,15 @@ const Vets = () => {
                   </Card>
                 ) : (
                   filtered.map((vet) => {
-                    const address = vet.address || '';
-                    const city = vet.city || '';
-                    const state = vet.state || '';
-                    const zipCode = vet.zipCode || '';
-                    const specialization = Array.isArray(vet.specialization) 
-                      ? vet.specialization.join(', ') 
+                    const address = vet.location?.address || vet.address || '';
+                    const city = vet.location?.city || vet.city || '';
+                    const state = vet.location?.state || vet.state || '';
+                    const zipCode = vet.location?.zipCode || vet.zipCode || '';
+                    const specialization = Array.isArray(vet.specialization)
+                      ? vet.specialization.join(', ')
                       : vet.specialization || '';
-                    const experience = vet.experience;
-                    const verified = vet.verified;
+                    const experience = vet.yearsOfExperience ?? vet.experience;
+                    const verified = vet.isVerified ?? vet.verified;
                     
                     return (
                       <Card 
