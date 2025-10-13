@@ -28,6 +28,7 @@ import FAQ from "./pages/FAQ";
 import { withAuth } from "./components/withAuth";
 import { withRole } from "./components/withRole";
 import ScrollToTop from "./components/ui/scroll-to-top";
+import AutoScrollToTop from "./components/AutoScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const AppContent = () => {
       </Routes>
       {!hideFooter && <SiteFooter />}
       <ScrollToTop />
+      <AutoScrollToTop />
     </>
   );
 };
