@@ -52,6 +52,10 @@ export interface Pet {
   owner: string | User;
   medicalHistory?: MedicalRecord[];
   vaccinations?: Vaccination[];
+  vaccineCards?: VaccineCard[];
+  medicalReports?: MedicalReport[];
+  surgeries?: Surgery[];
+  prescriptions?: Prescription[];
   allergies?: string[];
   medications?: Medication[];
   specialNeeds?: string;
@@ -76,6 +80,54 @@ export interface Vaccination {
   date: string;
   nextDueDate?: string;
   administeredBy?: string;
+  notes?: string;
+}
+
+export interface VaccineCard {
+  cardNumber?: string;
+  issueDate: string;
+  expiryDate?: string;
+  issuingAuthority?: string;
+  cardImageUrl?: string;
+  notes?: string;
+}
+
+export interface MedicalReport {
+  reportType: string;
+  reportDate: string;
+  veterinarian: string;
+  diagnosis?: string;
+  findings?: string;
+  recommendations?: string;
+  reportFileUrl?: string;
+  notes?: string;
+}
+
+export interface Surgery {
+  surgeryType: string;
+  surgeryDate: string;
+  surgeon: string;
+  clinic?: string;
+  anesthesia?: string;
+  complications?: string;
+  recoveryInstructions?: string;
+  followUpDate?: string;
+  surgeryReportUrl?: string;
+  notes?: string;
+}
+
+export interface Prescription {
+  medicationName: string;
+  prescriptionDate: string;
+  prescribingVet: string;
+  dosage: string;
+  frequency: string;
+  duration?: string;
+  quantity?: string;
+  refillsRemaining?: number;
+  instructions?: string;
+  prescriptionFileUrl?: string;
+  status?: 'Active' | 'Completed' | 'Discontinued';
   notes?: string;
 }
 
@@ -210,7 +262,40 @@ export interface SymptomAnalysisResponse {
   disclaimerShown: boolean;
 }
 
-// Resource/Article Types
+// Symptom Check Types
+export interface SymptomCheck {
+  _id: string;
+  user?: string;
+  pet?: {
+    _id: string;
+    name: string;
+    species: string;
+    breed?: string;
+  };
+  symptoms: string;
+  imageUrl?: string;
+  aiResponse: {
+    possibleConditions: Array<{
+      name: string;
+      severity: 'low' | 'moderate' | 'high' | 'emergency';
+      confidence?: number;
+      description?: string;
+      recommendations?: string[];
+    }>;
+    urgencyLevel: 'low' | 'medium' | 'high' | 'emergency';
+    recommendations: string[];
+    disclaimer: string;
+  };
+  followUpAction: 'none' | 'monitor' | 'schedule' | 'emergency';
+  appointmentBooked: boolean;
+  relatedAppointment?: string;
+  guestSession?: string;
+  ipAddress?: string;
+  createdAt: string;
+  updatedAt: string;
+  timeSince?: string;
+  isUrgent?: boolean;
+}
 export interface Article {
   id: string;
   title: string;

@@ -291,9 +291,49 @@ const getUsageStats = async (req, res) => {
   }
 };
 
+/**
+ * Get symptom check history for current user
+ */
+const getSymptomCheckHistory = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required to view history',
+      });
+    }
+
+    const user = await User.findByFirebaseUid(req.user.uid);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    const limit = parseInt(req.query.limit) || 20;
+    const history = await SymptomCheck.getRecentChecks(user._id, limit);
+
+    res.status(200).json({
+      success: true,
+      data: history,
+      count: history.length,
+    });
+  } catch (error) {
+    console.error('Get symptom check history error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch symptom check history',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   checkSymptoms,
   getHealthAdvice,
   checkEmergency,
   getUsageStats,
+  getSymptomCheckHistory,
 };

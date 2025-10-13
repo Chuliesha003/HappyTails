@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { Brain, AlertCircle, Sparkles, Heart, Stethoscope, PawPrint } from "lucide-react";
 import { symptomsService } from "@/services/symptoms";
 import type { SymptomAnalysisResponse } from "@/types/api";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import SymptomCheckHistory from "@/components/SymptomCheckHistory";
 
 // Simple symptom definitions — these would normally come from an API
 const SYMPTOMS = [
@@ -90,7 +91,7 @@ export default function SymptomChecker() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
+    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, hsl(310 60% 99%), hsl(297 30% 97%), hsl(330 60% 98%))' }}>
       <Helmet>
         <title>AI Symptom Checker – HappyTails</title>
         <meta name="description" content="Check your pet's symptoms with our AI-powered tool and get helpful guidance." />
@@ -111,11 +112,11 @@ export default function SymptomChecker() {
           </p>
         </header>
 
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="max-w-6xl mx-auto">
           {/* Main Input Section */}
-          <section className="lg:col-span-2 space-y-6">
+          <section className="space-y-6">
             <Card className="shadow-lg border-pink-100 transition hover:shadow-xl">
-              <CardHeader className="bg-gradient-to-r from-pink-500 to-purple-600 text-white">
+              <CardHeader style={{ background: 'linear-gradient(135deg, hsl(297 64% 28%), hsl(327 100% 47%))', color: 'white' }}>
                 <CardTitle className="flex items-center gap-2">
                   <Stethoscope className="h-5 w-5" />
                   Tell us what's wrong
@@ -199,8 +200,7 @@ export default function SymptomChecker() {
                   <Button 
                     onClick={analyze} 
                     disabled={loading}
-                    className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
-                  >
+                    className="w-full" style={{ background: 'linear-gradient(135deg, hsl(297 64% 28%), hsl(327 100% 47%))', color: 'white' }}>
                     {loading ? (
                       <>
                         <Sparkles className="h-4 w-4 mr-2 animate-spin" />
@@ -227,7 +227,7 @@ export default function SymptomChecker() {
             </Card>
 
             {/* Info Card */}
-            <Card className="border-blue-100 bg-gradient-to-br from-blue-50 to-white">
+            <Card style={{ borderColor: 'hsl(297 64% 28% / 0.2)', background: 'linear-gradient(135deg, hsl(341 85% 74% / 0.1), hsl(0 0% 100%))' }}>
               <CardContent className="p-6">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -240,91 +240,108 @@ export default function SymptomChecker() {
                 </div>
               </CardContent>
             </Card>
-          </section>
 
-          {/* Results Sidebar */}
-          <aside>
-            <Card className="shadow-lg border-purple-100 sticky top-24">
-              <CardHeader className="bg-gradient-to-br from-purple-100 to-pink-100">
-                <CardTitle className="flex items-center gap-2 text-purple-900">
-                  <Heart className="h-5 w-5 text-pink-600" />
-                  AI Guidance
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                {results === null ? (
-                  <div className="text-center py-8">
-                    <Brain className="h-12 w-12 mx-auto text-pink-300 mb-3" />
-                    <p className="text-sm text-gray-600">
-                      Select symptoms or describe what's happening, then press <strong>Check Symptoms</strong> to see guidance.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {results.map((r, i) => (
-                      <div 
-                        key={i} 
-                        className={`p-4 rounded-lg ${
-                          r.includes("URGENT") 
-                            ? "bg-red-50 border-2 border-red-300" 
-                            : "bg-gradient-to-br from-pink-50 to-purple-50 border border-pink-200"
-                        }`}
-                      >
-                        <p className={`text-sm ${r.includes("URGENT") ? "text-red-900 font-semibold" : "text-gray-800"}`}>
-                          {r}
+            {/* AI Analysis Results */}
+            {structured && (
+              <Card className="shadow-lg border-pink-100">
+                <CardHeader style={{ background: 'linear-gradient(135deg, hsl(297 64% 28%), hsl(327 100% 47%))', color: 'white' }}>
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="h-5 w-5" />
+                    AI Analysis Results
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="text-sm font-medium text-gray-700">Overall Urgency:</span>
+                      <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                        structured.overallUrgency === 'high' 
+                          ? 'bg-red-100 text-red-800' 
+                          : structured.overallUrgency === 'moderate' 
+                            ? 'bg-yellow-100 text-yellow-800' 
+                            : 'bg-green-100 text-green-800'
+                      }`}>
+                        {structured.overallUrgency.toUpperCase()}
+                      </span>
+                    </div>
+                    
+                    {structured.overallUrgency === 'high' && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                        <div className="flex items-center gap-2 text-red-800 font-semibold mb-2">
+                          <AlertCircle className="h-5 w-5" />
+                          URGENT: Seek Veterinary Care Immediately
+                        </div>
+                        <p className="text-red-700 text-sm">
+                          The symptoms described may indicate a serious condition requiring immediate professional attention.
                         </p>
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
 
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <p className="text-xs text-gray-500 text-center">
-                    🚑 <strong>Emergency?</strong> Contact your local emergency vet immediately.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </aside>
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Possible Conditions</h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {structured.conditions.map((c, idx) => (
+                        <div key={idx} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium text-gray-900">{c.name}</h4>
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              c.urgency === 'high' ? 'bg-red-100 text-red-700' : 
+                              c.urgency === 'moderate' ? 'bg-yellow-100 text-yellow-700' : 
+                              'bg-green-100 text-green-700'
+                            }`}>
+                              {c.urgency}
+                            </span>
+                          </div>
+                          
+                          <p className="text-sm text-gray-700 mb-3">{c.description}</p>
+                          
+                          {c.firstAidTips?.length > 0 && (
+                            <div className="mb-3">
+                              <div className="text-sm font-medium text-gray-900 mb-1">First Aid Tips:</div>
+                              <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
+                                {c.firstAidTips.map((tip, i) => <li key={i}>{tip}</li>)}
+                              </ul>
+                            </div>
+                          )}
+                          
+                          {c.recommendations?.length > 0 && (
+                            <div>
+                              <div className="text-sm font-medium text-gray-900 mb-1">Recommendations:</div>
+                              <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
+                                {c.recommendations.map((tip, i) => <li key={i}>{tip}</li>)}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-sm font-semibold text-blue-900 mb-1">Important Disclaimer</h4>
+                          <p className="text-sm text-blue-800">
+                            This AI analysis is for informational purposes only and should not replace professional veterinary advice. 
+                            Always consult a licensed veterinarian for proper diagnosis and treatment.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </section>
         </div>
 
-        {/* Structured results list */}
-        {structured && (
-          <div className="max-w-5xl mx-auto mt-10 space-y-6">
-            <h2 className="text-2xl font-semibold text-gray-900">Possible conditions</h2>
-            <div className="grid gap-6 md:grid-cols-2">
-              {structured.conditions.map((c, idx) => (
-                <Card key={idx} className="border-pink-100">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span>{c.name}</span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${c.urgency === 'high' ? 'bg-red-100 text-red-700' : c.urgency === 'moderate' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>{c.urgency.toUpperCase()}</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p className="text-sm text-gray-700">{c.description}</p>
-                    {c.firstAidTips?.length ? (
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">First-aid tips</div>
-                        <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
-                          {c.firstAidTips.slice(0,3).map((t, i) => <li key={i}>{t}</li>)}
-                        </ul>
-                      </div>
-                    ) : null}
-                    {c.recommendations?.length ? (
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">Recommendations</div>
-                        <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
-                          {c.recommendations.slice(0,3).map((t, i) => <li key={i}>{t}</li>)}
-                        </ul>
-                      </div>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* AI Analysis History */}
+        <div className="mt-12">
+          <SymptomCheckHistory />
+        </div>
       </div>
     </div>
   );

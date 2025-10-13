@@ -101,4 +101,11 @@ router.post('/emergency', aiLimiter, symptomController.checkEmergency);
  */
 router.get('/usage', optionalAuth, symptomController.getUsageStats);
 
+/**
+ * @route   GET /api/symptom-checker/history
+ * @desc    Get symptom check history for authenticated user
+ * @access  Private
+ */
+router.get('/history', symptomController.getSymptomCheckHistory);
+
 module.exports = router;

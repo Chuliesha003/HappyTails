@@ -1,5 +1,5 @@
 import api, { handleApiError } from '@/lib/api';
-import type { SymptomAnalysisRequest, SymptomAnalysisResponse } from '@/types/api';
+import type { SymptomAnalysisRequest, SymptomAnalysisResponse, SymptomCheck } from '@/types/api';
 
 // Symptoms Service
 export const symptomsService = {
@@ -56,6 +56,22 @@ export const symptomsService = {
         return r.data as SymptomAnalysisResponse;
       }
       return r as unknown as SymptomAnalysisResponse;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+
+  /**
+   * Get symptom check history for current user
+   */
+  getSymptomCheckHistory: async (limit?: number): Promise<SymptomCheck[]> => {
+    try {
+      const params = limit ? { limit: limit.toString() } : {};
+      const response = await api.get<{ success: boolean; data: SymptomCheck[]; count: number }>(
+        '/symptom-checker/history',
+        { params }
+      );
+      return response.data;
     } catch (error) {
       throw handleApiError(error);
     }
