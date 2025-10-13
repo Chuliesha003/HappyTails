@@ -373,6 +373,75 @@ const addVaccination = async (req, res) => {
   }
 };
 
+const firebaseStorage = require('../utils/firebaseStorage');
+
+/**
+ * Upload photo for a pet
+ */
+const uploadPetPhoto = async (req, res) => {
+  try {
+    const { uid: firebaseUid } = req.user;
+    const { id } = req.params;
+
+    // Find user
+    const user = await User.findByFirebaseUid(firebaseUid);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Find pet and verify ownership
+    const pet = await Pet.findOne({ _id: id, owner: user._id, isActive: true });
+
+    if (!pet) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pet not found or you do not have permission to update it',
+      });
+    }
+
+    // Check if file was uploaded
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No photo file provided',
+      });
+    }
+
+    // Validate file
+    firebaseStorage.validateImageFile(req.file);
+
+    // Upload to Firebase Storage
+    const photoUrl = await firebaseStorage.uploadFile(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype,
+      'pets'
+    );
+
+    // Update pet with new photo URL
+    pet.photoUrl = photoUrl;
+    await pet.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Pet photo uploaded successfully',
+      pet: pet.toSafeObject(),
+      photoUrl: photoUrl,
+    });
+  } catch (error) {
+    console.error('Upload pet photo error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload pet photo',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAllPets,
   getPetById,
@@ -381,4 +450,5 @@ module.exports = {
   deletePet,
   addMedicalRecord,
   addVaccination,
+  uploadPetPhoto,
 };

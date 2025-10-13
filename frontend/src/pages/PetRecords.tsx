@@ -10,10 +10,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
-import { Edit, Plus, Trash2, AlertCircle, Loader2, X, FileText, Syringe, Pill } from "lucide-react";
+import { Edit, Plus, Trash2, AlertCircle, Loader2, X, FileText, Syringe, Pill, CreditCard, Stethoscope, Scissors } from "lucide-react";
 import { petsService } from "@/services/pets";
 import { toast } from "@/hooks/use-toast";
-import type { Pet, MedicalRecord, Vaccination, Medication } from "@/types/api";
+import type { Pet, MedicalRecord, Vaccination, Medication, VaccineCard, MedicalReport, Surgery, Prescription } from "@/types/api";
 
 interface FormData {
   name: string;
@@ -29,7 +29,13 @@ interface FormData {
   medicalRecords: MedicalRecord[];
   vaccinations: Vaccination[];
   medications: Medication[];
+  vaccineCards: VaccineCard[];
+  medicalReports: MedicalReport[];
+  surgeries: Surgery[];
+  prescriptions: Prescription[];
   specialNeeds: string;
+  photoUrl: string;
+  photoFile: File | null;
 }
 
 const PetRecords = () => {
@@ -43,10 +49,18 @@ const PetRecords = () => {
   const [showMedicalForm, setShowMedicalForm] = useState(false);
   const [showVaccinationForm, setShowVaccinationForm] = useState(false);
   const [showMedicationForm, setShowMedicationForm] = useState(false);
+  const [showVaccineCardForm, setShowVaccineCardForm] = useState(false);
+  const [showMedicalReportForm, setShowMedicalReportForm] = useState(false);
+  const [showSurgeryForm, setShowSurgeryForm] = useState(false);
+  const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
   
   const [currentMedicalRecord, setCurrentMedicalRecord] = useState<MedicalRecord | null>(null);
   const [currentVaccination, setCurrentVaccination] = useState<Vaccination | null>(null);
   const [currentMedication, setCurrentMedication] = useState<Medication | null>(null);
+  const [currentVaccineCard, setCurrentVaccineCard] = useState<VaccineCard | null>(null);
+  const [currentMedicalReport, setCurrentMedicalReport] = useState<MedicalReport | null>(null);
+  const [currentSurgery, setCurrentSurgery] = useState<Surgery | null>(null);
+  const [currentPrescription, setCurrentPrescription] = useState<Prescription | null>(null);
   
   const [formData, setFormData] = useState<FormData>({
     name: "",
@@ -61,7 +75,13 @@ const PetRecords = () => {
     medicalRecords: [],
     vaccinations: [],
     medications: [],
-    specialNeeds: ""
+    vaccineCards: [],
+    medicalReports: [],
+    surgeries: [],
+    prescriptions: [],
+    specialNeeds: "",
+    photoUrl: "",
+    photoFile: null
   });
 
   // Load pets from backend on mount
@@ -109,7 +129,13 @@ const PetRecords = () => {
       medicalRecords: [],
       vaccinations: [],
       medications: [],
-      specialNeeds: ""
+      vaccineCards: [],
+      medicalReports: [],
+      surgeries: [],
+      prescriptions: [],
+      specialNeeds: "",
+      photoUrl: "",
+      photoFile: null
     });
     setEditingPetId(null);
     setError(null); // Clear any error messages
@@ -206,7 +232,13 @@ const PetRecords = () => {
       medicalRecords: pet.medicalHistory || [],
       vaccinations: pet.vaccinations || [],
       medications: pet.medications || [],
-      specialNeeds: pet.specialNeeds || ''
+      vaccineCards: pet.vaccineCards || [],
+      medicalReports: pet.medicalReports || [],
+      surgeries: pet.surgeries || [],
+      prescriptions: pet.prescriptions || [],
+      specialNeeds: pet.specialNeeds || '',
+      photoUrl: pet.photoUrl || '',
+      photoFile: null
     });
     setEditingPetId(pet.id);
   };
@@ -351,6 +383,161 @@ const PetRecords = () => {
   const handleDeleteMedication = (index: number) => {
     const updatedMedications = formData.medications.filter((_, i) => i !== index);
     setFormData(prev => ({ ...prev, medications: updatedMedications }));
+  };
+
+  const handleAddVaccineCard = () => {
+    setCurrentVaccineCard({
+      cardNumber: '',
+      issueDate: '',
+      expiryDate: '',
+      issuingAuthority: '',
+      notes: ''
+    });
+    setShowVaccineCardForm(true);
+  };
+
+  const handleEditVaccineCard = (vaccineCard: VaccineCard) => {
+    setCurrentVaccineCard(vaccineCard);
+    setShowVaccineCardForm(true);
+  };
+
+  const handleSaveVaccineCard = () => {
+    if (!currentVaccineCard) return;
+    
+    const updatedVaccineCards = [...formData.vaccineCards];
+    const existingIndex = updatedVaccineCards.findIndex(vc => vc === currentVaccineCard);
+    
+    if (existingIndex >= 0) {
+      updatedVaccineCards[existingIndex] = currentVaccineCard;
+    } else {
+      updatedVaccineCards.push(currentVaccineCard);
+    }
+    
+    setFormData(prev => ({ ...prev, vaccineCards: updatedVaccineCards }));
+    setCurrentVaccineCard(null);
+    setShowVaccineCardForm(false);
+  };
+
+  const handleDeleteVaccineCard = (index: number) => {
+    const updatedVaccineCards = formData.vaccineCards.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, vaccineCards: updatedVaccineCards }));
+  };
+
+  const handleAddMedicalReport = () => {
+    setCurrentMedicalReport({
+      reportType: '',
+      reportDate: '',
+      veterinarian: '',
+      diagnosis: '',
+      findings: ''
+    });
+    setShowMedicalReportForm(true);
+  };
+
+  const handleEditMedicalReport = (medicalReport: MedicalReport) => {
+    setCurrentMedicalReport(medicalReport);
+    setShowMedicalReportForm(true);
+  };
+
+  const handleSaveMedicalReport = () => {
+    if (!currentMedicalReport) return;
+    
+    const updatedMedicalReports = [...formData.medicalReports];
+    const existingIndex = updatedMedicalReports.findIndex(mr => mr === currentMedicalReport);
+    
+    if (existingIndex >= 0) {
+      updatedMedicalReports[existingIndex] = currentMedicalReport;
+    } else {
+      updatedMedicalReports.push(currentMedicalReport);
+    }
+    
+    setFormData(prev => ({ ...prev, medicalReports: updatedMedicalReports }));
+    setCurrentMedicalReport(null);
+    setShowMedicalReportForm(false);
+  };
+
+  const handleDeleteMedicalReport = (index: number) => {
+    const updatedMedicalReports = formData.medicalReports.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, medicalReports: updatedMedicalReports }));
+  };
+
+  const handleAddSurgery = () => {
+    setCurrentSurgery({
+      surgeryType: '',
+      surgeryDate: '',
+      surgeon: '',
+      anesthesia: '',
+      complications: '',
+      notes: ''
+    });
+    setShowSurgeryForm(true);
+  };
+
+  const handleEditSurgery = (surgery: Surgery) => {
+    setCurrentSurgery(surgery);
+    setShowSurgeryForm(true);
+  };
+
+  const handleSaveSurgery = () => {
+    if (!currentSurgery) return;
+    
+    const updatedSurgeries = [...formData.surgeries];
+    const existingIndex = updatedSurgeries.findIndex(s => s === currentSurgery);
+    
+    if (existingIndex >= 0) {
+      updatedSurgeries[existingIndex] = currentSurgery;
+    } else {
+      updatedSurgeries.push(currentSurgery);
+    }
+    
+    setFormData(prev => ({ ...prev, surgeries: updatedSurgeries }));
+    setCurrentSurgery(null);
+    setShowSurgeryForm(false);
+  };
+
+  const handleDeleteSurgery = (index: number) => {
+    const updatedSurgeries = formData.surgeries.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, surgeries: updatedSurgeries }));
+  };
+
+  const handleAddPrescription = () => {
+    setCurrentPrescription({
+      medicationName: '',
+      prescriptionDate: '',
+      prescribingVet: '',
+      dosage: '',
+      frequency: '',
+      duration: '',
+      instructions: ''
+    });
+    setShowPrescriptionForm(true);
+  };
+
+  const handleEditPrescription = (prescription: Prescription) => {
+    setCurrentPrescription(prescription);
+    setShowPrescriptionForm(true);
+  };
+
+  const handleSavePrescription = () => {
+    if (!currentPrescription) return;
+    
+    const updatedPrescriptions = [...formData.prescriptions];
+    const existingIndex = updatedPrescriptions.findIndex(p => p === currentPrescription);
+    
+    if (existingIndex >= 0) {
+      updatedPrescriptions[existingIndex] = currentPrescription;
+    } else {
+      updatedPrescriptions.push(currentPrescription);
+    }
+    
+    setFormData(prev => ({ ...prev, prescriptions: updatedPrescriptions }));
+    setCurrentPrescription(null);
+    setShowPrescriptionForm(false);
+  };
+
+  const handleDeletePrescription = (index: number) => {
+    const updatedPrescriptions = formData.prescriptions.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, prescriptions: updatedPrescriptions }));
   };
 
   return (
@@ -532,7 +719,7 @@ const PetRecords = () => {
       </Card>
 
       {/* Medical Records Section */}
-      {editingPetId && (
+      {
         <Card className="max-w-3xl mx-auto">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -612,10 +799,10 @@ const PetRecords = () => {
             )}
           </CardContent>
         </Card>
-      )}
+      }
 
       {/* Vaccinations Section */}
-      {editingPetId && (
+      {
         <Card className="max-w-3xl mx-auto">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -690,10 +877,10 @@ const PetRecords = () => {
             )}
           </CardContent>
         </Card>
-      )}
+      }
 
       {/* Medications Section */}
-      {editingPetId && (
+      {
         <Card className="max-w-3xl mx-auto">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -768,7 +955,282 @@ const PetRecords = () => {
             )}
           </CardContent>
         </Card>
-      )}
+      }
+
+      {/* Vaccine Cards Section */}
+      {
+        <Card className="max-w-3xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Vaccine Cards
+              </span>
+              <Button type="button" size="sm" onClick={handleAddVaccineCard}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Card
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {formData.vaccineCards.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">
+                No vaccine cards added yet.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {formData.vaccineCards.map((card, index) => (
+                  <Card key={index} className="border-l-4 border-l-green-500">
+                    <CardContent className="pt-4">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-2">
+                          <h4 className="font-semibold">{card.cardNumber || 'No Card Number'}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Issued: {card.issueDate} {card.expiryDate && `| Expires: ${card.expiryDate}`}
+                          </p>
+                          {card.issuingAuthority && (
+                            <p className="text-sm text-muted-foreground">Authority: {card.issuingAuthority}</p>
+                          )}
+                          {card.notes && (
+                            <p className="text-sm">{card.notes}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditVaccineCard(card)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteVaccineCard(index)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      }
+
+      {/* Medical Reports Section */}
+      {
+        <Card className="max-w-3xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Stethoscope className="h-5 w-5" />
+                Medical Reports
+              </span>
+              <Button type="button" size="sm" onClick={handleAddMedicalReport}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Report
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {formData.medicalReports.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">
+                No medical reports added yet.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {formData.medicalReports.map((report, index) => (
+                  <Card key={index} className="border-l-4 border-l-purple-500">
+                    <CardContent className="pt-4">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-2">
+                          <h4 className="font-semibold">{report.reportType}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Date: {report.reportDate} | Vet: {report.veterinarian}
+                          </p>
+                          {report.diagnosis && (
+                            <p className="text-sm">Diagnosis: {report.diagnosis}</p>
+                          )}
+                          {report.findings && (
+                            <p className="text-sm">{report.findings}</p>
+                          )}
+                          {report.notes && (
+                            <p className="text-sm">{report.notes}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditMedicalReport(report)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteMedicalReport(index)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      }
+
+      {/* Surgeries Section */}
+      {
+        <Card className="max-w-3xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Scissors className="h-5 w-5" />
+                Surgeries
+              </span>
+              <Button type="button" size="sm" onClick={handleAddSurgery}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Surgery
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {formData.surgeries.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">
+                No surgeries added yet.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {formData.surgeries.map((surgery, index) => (
+                  <Card key={index} className="border-l-4 border-l-red-500">
+                    <CardContent className="pt-4">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-2">
+                          <h4 className="font-semibold">{surgery.surgeryType}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Date: {surgery.surgeryDate} | Surgeon: {surgery.surgeon}
+                          </p>
+                          {surgery.anesthesia && (
+                            <p className="text-sm">Anesthesia: {surgery.anesthesia}</p>
+                          )}
+                          {surgery.complications && (
+                            <p className="text-sm text-red-600">Complications: {surgery.complications}</p>
+                          )}
+                          {surgery.notes && (
+                            <p className="text-sm">{surgery.notes}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditSurgery(surgery)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteSurgery(index)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      }
+
+      {/* Prescriptions Section */}
+      {
+        <Card className="max-w-3xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Pill className="h-5 w-5" />
+                Prescriptions
+              </span>
+              <Button type="button" size="sm" onClick={handleAddPrescription}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Prescription
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {formData.prescriptions.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">
+                No prescriptions added yet.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {formData.prescriptions.map((prescription, index) => (
+                  <Card key={index} className="border-l-4 border-l-orange-500">
+                    <CardContent className="pt-4">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-2">
+                          <h4 className="font-semibold">{prescription.medicationName}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Date: {prescription.prescriptionDate} | Vet: {prescription.prescribingVet}
+                          </p>
+                          <p className="text-sm">Dosage: {prescription.dosage} | Frequency: {prescription.frequency}</p>
+                          {prescription.duration && (
+                            <p className="text-sm">Duration: {prescription.duration}</p>
+                          )}
+                          {prescription.instructions && (
+                            <p className="text-sm">{prescription.instructions}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditPrescription(prescription)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeletePrescription(index)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      }
 
       {/* Medical Record Form Modal */}
       {showMedicalForm && currentMedicalRecord && (
@@ -995,6 +1457,345 @@ const PetRecords = () => {
               </Button>
               <Button type="button" onClick={handleSaveMedication}>
                 Save Medication
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Vaccine Card Form Modal */}
+      {showVaccineCardForm && currentVaccineCard && (
+        <Dialog open={showVaccineCardForm} onOpenChange={setShowVaccineCardForm}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {formData.vaccineCards.includes(currentVaccineCard) ? 'Edit Vaccine Card' : 'Add Vaccine Card'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="cardNumber">Card Number</Label>
+                <Input
+                  id="cardNumber"
+                  type="text"
+                  placeholder="Vaccine card number"
+                  value={currentVaccineCard.cardNumber}
+                  onChange={(e) => setCurrentVaccineCard(prev => prev ? {...prev, cardNumber: e.target.value} : null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="issueDate">Issue Date *</Label>
+                <Input
+                  id="issueDate"
+                  type="date"
+                  value={currentVaccineCard.issueDate}
+                  onChange={(e) => setCurrentVaccineCard(prev => prev ? {...prev, issueDate: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="expiryDate">Expiry Date</Label>
+                <Input
+                  id="expiryDate"
+                  type="date"
+                  value={currentVaccineCard.expiryDate}
+                  onChange={(e) => setCurrentVaccineCard(prev => prev ? {...prev, expiryDate: e.target.value} : null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="issuingAuthority">Issuing Authority</Label>
+                <Input
+                  id="issuingAuthority"
+                  type="text"
+                  placeholder="Clinic or authority name"
+                  value={currentVaccineCard.issuingAuthority}
+                  onChange={(e) => setCurrentVaccineCard(prev => prev ? {...prev, issuingAuthority: e.target.value} : null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vaccineCardNotes">Notes</Label>
+                <Textarea
+                  id="vaccineCardNotes"
+                  placeholder="Additional notes"
+                  value={currentVaccineCard.notes}
+                  onChange={(e) => setCurrentVaccineCard(prev => prev ? {...prev, notes: e.target.value} : null)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowVaccineCardForm(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleSaveVaccineCard}>
+                Save Vaccine Card
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Medical Report Form Modal */}
+      {showMedicalReportForm && currentMedicalReport && (
+        <Dialog open={showMedicalReportForm} onOpenChange={setShowMedicalReportForm}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {formData.medicalReports.includes(currentMedicalReport) ? 'Edit Medical Report' : 'Add Medical Report'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reportType">Report Type *</Label>
+                <Input
+                  id="reportType"
+                  type="text"
+                  placeholder="e.g., Blood Test, X-Ray, Ultrasound"
+                  value={currentMedicalReport.reportType}
+                  onChange={(e) => setCurrentMedicalReport(prev => prev ? {...prev, reportType: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reportDate">Report Date *</Label>
+                <Input
+                  id="reportDate"
+                  type="date"
+                  value={currentMedicalReport.reportDate}
+                  onChange={(e) => setCurrentMedicalReport(prev => prev ? {...prev, reportDate: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="veterinarian">Veterinarian *</Label>
+                <Input
+                  id="veterinarian"
+                  type="text"
+                  placeholder="Veterinarian name"
+                  value={currentMedicalReport.veterinarian}
+                  onChange={(e) => setCurrentMedicalReport(prev => prev ? {...prev, veterinarian: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="diagnosis">Diagnosis</Label>
+                <Input
+                  id="diagnosis"
+                  type="text"
+                  placeholder="Diagnosis or findings"
+                  value={currentMedicalReport.diagnosis}
+                  onChange={(e) => setCurrentMedicalReport(prev => prev ? {...prev, diagnosis: e.target.value} : null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="findings">Findings</Label>
+                <Textarea
+                  id="findings"
+                  placeholder="Detailed findings or results"
+                  value={currentMedicalReport.findings}
+                  onChange={(e) => setCurrentMedicalReport(prev => prev ? {...prev, findings: e.target.value} : null)}
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reportNotes">Notes</Label>
+                <Textarea
+                  id="reportNotes"
+                  placeholder="Additional notes"
+                  value={currentMedicalReport.notes}
+                  onChange={(e) => setCurrentMedicalReport(prev => prev ? {...prev, notes: e.target.value} : null)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowMedicalReportForm(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleSaveMedicalReport}>
+                Save Medical Report
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Surgery Form Modal */}
+      {showSurgeryForm && currentSurgery && (
+        <Dialog open={showSurgeryForm} onOpenChange={setShowSurgeryForm}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {formData.surgeries.includes(currentSurgery) ? 'Edit Surgery' : 'Add Surgery'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="surgeryType">Surgery Type *</Label>
+                <Input
+                  id="surgeryType"
+                  type="text"
+                  placeholder="e.g., Spay, Dental Cleaning, Tumor Removal"
+                  value={currentSurgery.surgeryType}
+                  onChange={(e) => setCurrentSurgery(prev => prev ? {...prev, surgeryType: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="surgeryDate">Surgery Date *</Label>
+                <Input
+                  id="surgeryDate"
+                  type="date"
+                  value={currentSurgery.surgeryDate}
+                  onChange={(e) => setCurrentSurgery(prev => prev ? {...prev, surgeryDate: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="surgeon">Surgeon *</Label>
+                <Input
+                  id="surgeon"
+                  type="text"
+                  placeholder="Veterinarian or surgeon name"
+                  value={currentSurgery.surgeon}
+                  onChange={(e) => setCurrentSurgery(prev => prev ? {...prev, surgeon: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="anesthesia">Anesthesia</Label>
+                <Input
+                  id="anesthesia"
+                  type="text"
+                  placeholder="Type of anesthesia used"
+                  value={currentSurgery.anesthesia}
+                  onChange={(e) => setCurrentSurgery(prev => prev ? {...prev, anesthesia: e.target.value} : null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="complications">Complications</Label>
+                <Textarea
+                  id="complications"
+                  placeholder="Any complications during or after surgery"
+                  value={currentSurgery.complications}
+                  onChange={(e) => setCurrentSurgery(prev => prev ? {...prev, complications: e.target.value} : null)}
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="surgeryNotes">Notes</Label>
+                <Textarea
+                  id="surgeryNotes"
+                  placeholder="Recovery instructions, follow-up care, etc."
+                  value={currentSurgery.notes}
+                  onChange={(e) => setCurrentSurgery(prev => prev ? {...prev, notes: e.target.value} : null)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowSurgeryForm(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleSaveSurgery}>
+                Save Surgery
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Prescription Form Modal */}
+      {showPrescriptionForm && currentPrescription && (
+        <Dialog open={showPrescriptionForm} onOpenChange={setShowPrescriptionForm}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {formData.prescriptions.includes(currentPrescription) ? 'Edit Prescription' : 'Add Prescription'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="medicationName">Medication Name *</Label>
+                <Input
+                  id="medicationName"
+                  type="text"
+                  placeholder="Name of the medication"
+                  value={currentPrescription.medicationName}
+                  onChange={(e) => setCurrentPrescription(prev => prev ? {...prev, medicationName: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="prescriptionDate">Prescription Date *</Label>
+                <Input
+                  id="prescriptionDate"
+                  type="date"
+                  value={currentPrescription.prescriptionDate}
+                  onChange={(e) => setCurrentPrescription(prev => prev ? {...prev, prescriptionDate: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="prescribingVet">Prescribing Vet *</Label>
+                <Input
+                  id="prescribingVet"
+                  type="text"
+                  placeholder="Veterinarian who prescribed"
+                  value={currentPrescription.prescribingVet}
+                  onChange={(e) => setCurrentPrescription(prev => prev ? {...prev, prescribingVet: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="prescriptionDosage">Dosage *</Label>
+                <Input
+                  id="prescriptionDosage"
+                  type="text"
+                  placeholder="e.g., 10mg, 1 tablet"
+                  value={currentPrescription.dosage}
+                  onChange={(e) => setCurrentPrescription(prev => prev ? {...prev, dosage: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="frequency">Frequency *</Label>
+                <Input
+                  id="frequency"
+                  type="text"
+                  placeholder="e.g., Once daily, Twice weekly"
+                  value={currentPrescription.frequency}
+                  onChange={(e) => setCurrentPrescription(prev => prev ? {...prev, frequency: e.target.value} : null)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duration</Label>
+                <Input
+                  id="duration"
+                  type="text"
+                  placeholder="e.g., 7 days, Ongoing"
+                  value={currentPrescription.duration}
+                  onChange={(e) => setCurrentPrescription(prev => prev ? {...prev, duration: e.target.value} : null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="instructions">Instructions</Label>
+                <Textarea
+                  id="instructions"
+                  placeholder="Special instructions or notes"
+                  value={currentPrescription.instructions}
+                  onChange={(e) => setCurrentPrescription(prev => prev ? {...prev, instructions: e.target.value} : null)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowPrescriptionForm(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleSavePrescription}>
+                Save Prescription
               </Button>
             </DialogFooter>
           </DialogContent>

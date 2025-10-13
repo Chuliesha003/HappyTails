@@ -70,7 +70,7 @@ export const petsService = {
       const formData = new FormData();
       formData.append('photo', file);
       
-      const response = await api.upload<{ pet: Pet }>(`/pets/${petId}/photo`, formData);
+      const response = await api.upload<{ pet: Pet }>(`/pets/${petId}/upload-photo`, formData);
       return response.pet;
     } catch (error) {
       throw handleApiError(error);

@@ -23,6 +23,170 @@ const vaccinationSchema = new mongoose.Schema({
   },
 });
 
+const vaccineCardSchema = new mongoose.Schema({
+  cardNumber: {
+    type: String,
+    trim: true,
+  },
+  issueDate: {
+    type: Date,
+    required: true,
+  },
+  expiryDate: {
+    type: Date,
+  },
+  issuingAuthority: {
+    type: String,
+    trim: true,
+  },
+  cardImageUrl: {
+    type: String,
+    trim: true,
+  },
+  notes: {
+    type: String,
+    trim: true,
+  },
+});
+
+const medicalReportSchema = new mongoose.Schema({
+  reportType: {
+    type: String,
+    required: true,
+    enum: ['Blood Test', 'X-Ray', 'Ultrasound', 'MRI', 'CT Scan', 'Biopsy', 'Other'],
+    trim: true,
+  },
+  reportDate: {
+    type: Date,
+    required: true,
+  },
+  veterinarian: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  diagnosis: {
+    type: String,
+    trim: true,
+  },
+  findings: {
+    type: String,
+    trim: true,
+  },
+  recommendations: {
+    type: String,
+    trim: true,
+  },
+  reportFileUrl: {
+    type: String,
+    trim: true,
+  },
+  notes: {
+    type: String,
+    trim: true,
+  },
+});
+
+const surgerySchema = new mongoose.Schema({
+  surgeryType: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  surgeryDate: {
+    type: Date,
+    required: true,
+  },
+  surgeon: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  clinic: {
+    type: String,
+    trim: true,
+  },
+  anesthesia: {
+    type: String,
+    trim: true,
+  },
+  complications: {
+    type: String,
+    trim: true,
+  },
+  recoveryInstructions: {
+    type: String,
+    trim: true,
+  },
+  followUpDate: {
+    type: Date,
+  },
+  surgeryReportUrl: {
+    type: String,
+    trim: true,
+  },
+  notes: {
+    type: String,
+    trim: true,
+  },
+});
+
+const prescriptionSchema = new mongoose.Schema({
+  medicationName: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  prescriptionDate: {
+    type: Date,
+    required: true,
+  },
+  prescribingVet: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  dosage: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  frequency: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  duration: {
+    type: String,
+    trim: true,
+  },
+  quantity: {
+    type: String,
+    trim: true,
+  },
+  refillsRemaining: {
+    type: Number,
+    default: 0,
+  },
+  instructions: {
+    type: String,
+    trim: true,
+  },
+  prescriptionFileUrl: {
+    type: String,
+    trim: true,
+  },
+  status: {
+    type: String,
+    enum: ['Active', 'Completed', 'Discontinued'],
+    default: 'Active',
+  },
+  notes: {
+    type: String,
+    trim: true,
+  },
+});
+
 const medicalRecordSchema = new mongoose.Schema({
   date: {
     type: Date,
@@ -127,6 +291,10 @@ const petSchema = new mongoose.Schema(
     },
     medicalHistory: [medicalRecordSchema],
     vaccinations: [vaccinationSchema],
+    vaccineCards: [vaccineCardSchema],
+    medicalReports: [medicalReportSchema],
+    surgeries: [surgerySchema],
+    prescriptions: [prescriptionSchema],
     allergies: [
       {
         type: String,
@@ -245,12 +413,22 @@ petSchema.methods.toSafeObject = function () {
     gender: this.gender,
     color: this.color,
     microchipId: this.microchipId,
+    medicalHistory: this.medicalHistory,
+    vaccinations: this.vaccinations,
+    vaccineCards: this.vaccineCards,
+    medicalReports: this.medicalReports,
+    surgeries: this.surgeries,
+    prescriptions: this.prescriptions,
     allergies: this.allergies,
     medications: this.medications,
     specialNeeds: this.specialNeeds,
     photoUrl: this.photoUrl,
     medicalRecordCount: this.medicalHistory.length,
     vaccinationCount: this.vaccinations.length,
+    vaccineCardCount: this.vaccineCards.length,
+    medicalReportCount: this.medicalReports.length,
+    surgeryCount: this.surgeries.length,
+    prescriptionCount: this.prescriptions.length,
     upcomingVaccinations: this.getUpcomingVaccinations(),
     overdueVaccinations: this.getOverdueVaccinations(),
     createdAt: this.createdAt,

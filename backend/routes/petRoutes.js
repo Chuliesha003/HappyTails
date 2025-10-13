@@ -2,6 +2,23 @@ const express = require('express');
 const router = express.Router();
 const petController = require('../controllers/petController');
 const { verifyToken } = require('../middleware/auth');
+const multer = require('multer');
+
+// Configure multer for memory storage (files stored in memory as Buffer)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Check if file is an image
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  }
+});
 
 // All pet routes require authentication
 router.use(verifyToken);
@@ -97,11 +114,11 @@ router.delete('/:id', petController.deletePet);
 router.post('/:id/medical-records', petController.addMedicalRecord);
 
 /**
- * @route   POST /api/pets/:id/vaccinations
- * @desc    Add vaccination to a pet
+ * @route   POST /api/pets/:id/upload-photo
+ * @desc    Upload photo for a pet
  * @access  Private (must be owner)
- * @body    { name, date, nextDueDate, administeredBy, notes }
+ * @body    Form data with 'photo' field
  */
-router.post('/:id/vaccinations', petController.addVaccination);
+router.post('/:id/upload-photo', upload.single('photo'), petController.uploadPetPhoto);
 
 module.exports = router;
