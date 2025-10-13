@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -95,26 +95,45 @@ const UserDashboard = () => {
   };
 
   const recentActivity = [
-    { action: "Dashboard loaded", date: "Just now" },
-    { action: "Appointment booked for Buddy", date: "2 weeks ago" },
-    { action: "Health profile updated for Luna", date: "3 weeks ago" }
-  ];
+    ...appointments.slice(0, 2).map(appointment => ({
+      action: `Appointment scheduled for ${appointment.petId}`,
+      date: formatDate(appointment.date)
+    })),
+    ...pets.slice(0, 1).map(pet => ({
+      action: `${pet.name} profile updated`,
+      date: "Recently"
+    }))
+  ].slice(0, 3);
 
-  const healthMetrics = [
-    { metric: "Weight Tracking", value: 85, color: "bg-blue-500" },
-    { metric: "Activity Level", value: 92, color: "bg-green-500" },
-    { metric: "Mood Assessment", value: 78, color: "bg-yellow-500" }
-  ];
+  const healthMetrics = pets.map(pet => ({
+    metric: `${pet.name}'s Health Score`,
+    value: Math.min(100, Math.max(0, 
+      (pet.medicalHistory?.length || 0) * 10 + 
+      (pet.vaccinations?.length || 0) * 5 + 
+      (pet.prescriptions?.filter(p => p.status === 'Active').length || 0) * 15
+    )),
+    color: "bg-green-500"
+  }));
+
+  // Get active medications from all pets
+  const activeMedications = pets.flatMap(pet => 
+    (pet.prescriptions || [])
+      .filter(prescription => prescription.status === 'Active')
+      .map(prescription => ({
+        petName: pet.name,
+        ...prescription
+      }))
+  ).slice(0, 5); // Limit to 5 most recent
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
+    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, hsl(310 60% 99%), hsl(330 60% 98%), hsl(297 30% 97%))' }}>
       <Helmet>
         <title>User Dashboard - HappyTails</title>
       </Helmet>
 
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Welcome Header */}
-        <Card className="bg-gradient-to-r from-pink-500 to-purple-600 text-white border-0">
+        <Card style={{ background: 'linear-gradient(135deg, hsl(297 64% 28%), hsl(327 100% 47%))', color: 'white', border: 'none' }}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -177,6 +196,7 @@ const UserDashboard = () => {
                     <div key={pet.id} className="p-4 border rounded-lg space-y-3">
                       <div className="flex items-center space-x-4">
                         <Avatar className="h-12 w-12">
+                          <AvatarImage src={pet.photoUrl} alt={pet.name} />
                           <AvatarFallback className="bg-pink-100 text-pink-600">
                             {pet.name[0]}
                           </AvatarFallback>
@@ -299,9 +319,9 @@ const UserDashboard = () => {
             </Card>
 
             {/* Quick Actions */}
-            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+            <Card style={{ background: 'linear-gradient(135deg, hsl(341 85% 74% / 0.1), hsl(297 64% 28% / 0.05))', borderColor: 'hsl(297 64% 28% / 0.2)' }}>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-blue-800">
+                <CardTitle className="flex items-center gap-2" style={{ color: 'hsl(297 64% 28%)' }}>
                   <PlusCircle className="h-5 w-5" />
                   Quick Actions
                 </CardTitle>
@@ -350,30 +370,44 @@ const UserDashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {healthMetrics.map((metric, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium">{metric.metric}</span>
-                      <span className="text-muted-foreground">{metric.value}%</span>
+                {healthMetrics.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">No pets to track</p>
+                ) : (
+                  healthMetrics.map((metric, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">{metric.metric}</span>
+                        <span className="text-muted-foreground">{metric.value}%</span>
+                      </div>
+                      <Progress value={metric.value} className="h-2" />
                     </div>
-                    <Progress value={metric.value} className="h-2" />
-                  </div>
-                ))}
+                  ))
+                )}
                 
-                <div className="grid grid-cols-3 gap-2 mt-4 text-xs">
-                  <div className="text-center p-2 bg-blue-50 rounded">
-                    <p className="font-semibold text-blue-600">Weight</p>
-                    <p className="text-blue-500">32.1 kg</p>
+                {pets.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 mt-4 text-xs">
+                    <div className="text-center p-2 bg-blue-50 rounded">
+                      <p className="font-semibold text-blue-600">Total Pets</p>
+                      <p className="text-blue-500">{pets.length}</p>
+                    </div>
+                    <div className="text-center p-2 bg-green-50 rounded">
+                      <p className="font-semibold text-green-600">Active Meds</p>
+                      <p className="text-green-500">
+                        {pets.reduce((total, pet) => 
+                          total + (pet.prescriptions?.filter(p => p.status === 'Active').length || 0), 0
+                        )}
+                      </p>
+                    </div>
+                    <div className="text-center p-2 bg-yellow-50 rounded">
+                      <p className="font-semibold text-yellow-600">Records</p>
+                      <p className="text-yellow-500">
+                        {pets.reduce((total, pet) => 
+                          total + (pet.medicalHistory?.length || 0), 0
+                        )}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-center p-2 bg-green-50 rounded">
-                    <p className="font-semibold text-green-600">Activity</p>
-                    <p className="text-green-500">High</p>
-                  </div>
-                  <div className="text-center p-2 bg-yellow-50 rounded">
-                    <p className="font-semibold text-yellow-600">Mood</p>
-                    <p className="text-yellow-500">Happy</p>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 
@@ -386,28 +420,32 @@ const UserDashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="p-3 border rounded-lg">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium text-sm">Buddy - Heartworm Prevention</p>
-                      <p className="text-xs text-muted-foreground">Monthly tablet</p>
-                    </div>
-                    <Badge variant="outline" className="text-xs">Due in 5 days</Badge>
+                {activeMedications.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <Syringe className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No active medications</p>
                   </div>
-                </div>
-                
-                <div className="p-3 border rounded-lg">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium text-sm">Luna - Flea Treatment</p>
-                      <p className="text-xs text-muted-foreground">Topical application</p>
+                ) : (
+                  activeMedications.map((medication, index) => (
+                    <div key={index} className="p-3 border rounded-lg">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium text-sm">{medication.petName} - {medication.medicationName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {medication.dosage} • {medication.frequency}
+                            {medication.refillsRemaining > 0 && ` • ${medication.refillsRemaining} refills left`}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                          {medication.status}
+                        </Badge>
+                      </div>
                     </div>
-                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700">Completed</Badge>
-                  </div>
-                </div>
+                  ))
+                )}
                 
-                <Button variant="outline" className="w-full" size="sm">
-                  Add Medication
+                <Button variant="outline" className="w-full" size="sm" asChild>
+                  <Link to="/pet-records">Manage Medications</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -418,17 +456,25 @@ const UserDashboard = () => {
                 <CardTitle>Recent Activity</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-start gap-3 text-sm">
-                    <div className="w-2 h-2 bg-pink-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <div>
-                      <p className="font-medium">{activity.action}</p>
-                      <p className="text-muted-foreground text-xs">{activity.date}</p>
-                    </div>
+                {recentActivity.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No recent activity</p>
+                    <p className="text-xs">Book an appointment or add a pet to get started</p>
                   </div>
-                ))}
-                <Button variant="outline" className="w-full" size="sm">
-                  View All Activity
+                ) : (
+                  recentActivity.map((activity, index) => (
+                    <div key={index} className="flex items-start gap-3 text-sm">
+                      <div className="w-2 h-2 bg-pink-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <div>
+                        <p className="font-medium">{activity.action}</p>
+                        <p className="text-muted-foreground text-xs">{activity.date}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+                <Button variant="outline" className="w-full" size="sm" asChild>
+                  <Link to="/pet-records">View All Records</Link>
                 </Button>
               </CardContent>
             </Card>

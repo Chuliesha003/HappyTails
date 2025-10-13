@@ -56,8 +56,11 @@ All colors MUST be HSL. */
     --sidebar-ring: var(--brand-purple);
 
     /* Gradients & shadows */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--brand-purple)), hsl(var(--brand-pink)) 70%);
-    --gradient-soft: linear-gradient(180deg, hsl(310 60% 99%), hsl(330 60% 98%));
+    --gradient-primary: linear-gradient(135deg, hsl(var(--brand-purple)), hsl(var(--brand-pink)));
+    --gradient-secondary: linear-gradient(135deg, hsl(var(--brand-pink)), hsl(var(--brand-soft)));
+    --gradient-background: linear-gradient(135deg, hsl(310 60% 99%), hsl(330 60% 98%), hsl(297 30% 97%));
+    --gradient-card: linear-gradient(135deg, hsl(var(--brand-purple)), hsl(var(--brand-pink)));
+    --gradient-accent: linear-gradient(135deg, hsl(var(--brand-soft)), hsl(var(--brand-purple)));
     --shadow-elevated: 0 10px 30px -12px hsl(var(--brand-purple) / 0.25);
     --shadow-glow: 0 0 40px hsl(var(--brand-pink) / 0.35);
   }

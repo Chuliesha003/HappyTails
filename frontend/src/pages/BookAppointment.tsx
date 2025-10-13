@@ -130,7 +130,7 @@ const BookAppointment = () => {
         <meta name="description" content="Book an appointment with your chosen veterinarian" />
       </Helmet>
       
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
+      <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, hsl(310 60% 99%), hsl(330 60% 98%), hsl(297 30% 97%))' }}>
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           
           {/* Header */}
@@ -144,7 +144,7 @@ const BookAppointment = () => {
           </div>
 
           <Card className="shadow-lg border-pink-100">
-            <CardHeader className="bg-gradient-to-r from-pink-500 to-pink-600 text-white">
+            <CardHeader style={{ background: 'linear-gradient(135deg, hsl(327 100% 47%), hsl(297 64% 28%))', color: 'white' }}>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
                 Appointment Details
