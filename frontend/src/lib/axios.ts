@@ -17,16 +17,21 @@ const axiosInstance: AxiosInstance = axios.create({
   },
 });
 
+// Prevent aggressive redirects on 401 during initial app load where auth may still be rehydrating.
+const APP_START_TS = Date.now();
+const AUTH_REDIRECT_COOLDOWN_MS = 3000; // 3 seconds
+
 // Helper to check if error is retryable
+// Note: 429 responses (rate limit) are NOT retried so the client can show a friendly message immediately
 const isRetryableError = (error: AxiosError): boolean => {
   if (!error.response) {
     // Network errors are retryable
     return true;
   }
-  
+
   const status = error.response.status;
-  // Retry on 5xx server errors and 429 (rate limit)
-  return status >= 500 || status === 429;
+  // Retry on 5xx server errors only. Do NOT retry 429 (rate limit) so UI can react immediately.
+  return status >= 500 && status < 600;
 };
 
 // Helper to calculate retry delay with exponential backoff
@@ -52,13 +57,21 @@ axiosInstance.interceptors.request.use(
       }
       
       // Get current Firebase user
-      const currentUser = auth.currentUser;
-      
-      if (currentUser && config.headers) {
-        // Get fresh Firebase ID token
-        const idToken = await currentUser.getIdToken();
-        config.headers.Authorization = `Bearer ${idToken}`;
-      }
+        const currentUser = auth.currentUser;
+
+        if (currentUser && config.headers) {
+          // Get fresh Firebase ID token
+          const idToken = await currentUser.getIdToken();
+          config.headers.Authorization = `Bearer ${idToken}`;
+        } else {
+          // Fallback: if Firebase currentUser is not available (e.g. during rehydrate),
+          // try to use the stored token from localStorage so users who have a saved
+          // session in localStorage are not treated as unauthenticated immediately.
+          const fallbackToken = localStorage.getItem('happytails_token');
+          if (fallbackToken && config.headers) {
+            config.headers.Authorization = `Bearer ${fallbackToken}`;
+          }
+        }
     } catch (error) {
       console.warn('Unable to attach Firebase token:', error);
       // Continue with the request even if token fetch fails
@@ -106,16 +119,25 @@ axiosInstance.interceptors.response.use(
       const { status, data } = error.response;
       
       switch (status) {
-        case 401:
-          // Unauthorized - clear token and redirect to login
-          localStorage.removeItem('happytails_token');
-          localStorage.removeItem('happytails_user');
-          
-          // Only redirect if not already on login page
-          if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/login';
+        case 401: {
+          // Unauthorized - if we truly have no session, clear token and redirect to login.
+          // But avoid redirecting when the app is still rehydrating auth (e.g. Firebase onAuthStateChanged)
+          const storedToken = localStorage.getItem('happytails_token');
+          const currentUserLocal = auth.currentUser;
+
+          // If there's a stored token or Firebase still has a currentUser, don't force-redirect; let AuthProvider handle state.
+          if (!storedToken && !currentUserLocal) {
+            localStorage.removeItem('happytails_token');
+            localStorage.removeItem('happytails_user');
+            if (!window.location.pathname.includes('/login')) {
+              window.location.href = '/login';
+            }
+          } else {
+            // If we do have a stored token or firebase user, just log and allow AuthProvider/onAuthStateChanged to resolve.
+            console.warn('Received 401 but auth state appears to be present; deferring redirect to AuthProvider.');
           }
           break;
+        }
           
         case 403:
           // Forbidden - insufficient permissions

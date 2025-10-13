@@ -9,8 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { Brain, AlertCircle, Sparkles, Heart, Stethoscope, PawPrint } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { symptomsService } from "@/services/symptoms";
 import type { SymptomAnalysisResponse } from "@/types/api";
+
+// Define the AI response condition type
+interface AICondition {
+  name?: string;
+  rationale?: string;
+}
 import SymptomCheckHistory from "@/components/SymptomCheckHistory";
 
 // Simple symptom definitions — these would normally come from an API
@@ -37,6 +44,9 @@ export default function SymptomChecker() {
   const [photo, setPhoto] = useState<File | null>(null);
   const [petType, setPetType] = useState<string>("dog");
   const [petAge, setPetAge] = useState<string>("");
+  const [historyRefreshKey, setHistoryRefreshKey] = useState<number>(0);
+  const [rateLimited, setRateLimited] = useState<{ message: string; retryAfterSeconds?: number } | null>(null);
+  const [cooldownLeft, setCooldownLeft] = useState<number | null>(null);
 
   const toggle = (id: string) => {
     setSelected((s) => ({ ...s, [id]: !s[id] }));
@@ -57,38 +67,108 @@ export default function SymptomChecker() {
       const chosen = Object.keys(selected).filter((k) => selected[k]);
       const symptomText = [query, ...chosen.map((id) => SYMPTOMS.find(s => s.id === id)?.label || id)].filter(Boolean).join("; ");
       if (!symptomText.trim() && !photo) {
-        toast({ 
-          title: "Oops! No input", 
+        toast({
+          title: "Oops! No input",
           description: "Please select symptoms, type a description, or upload a photo.",
           variant: "destructive"
         });
         return;
       }
-      let data: SymptomAnalysisResponse;
+
+      // Call backend analyze which also persists the SymptomCheck
+      let result;
       if (photo) {
-        data = await symptomsService.analyzeSymptomsWithPhoto(symptomText, photo, petType, petAge ? Number(petAge) : undefined);
+        result = await symptomsService.analyzeSymptomsWithPhoto(symptomText, photo, petType, petAge ? Number(petAge) : undefined);
       } else {
-        data = await symptomsService.analyzeSymptoms({ symptoms: symptomText, petType, petAge: petAge ? Number(petAge) : undefined });
+        result = await symptomsService.analyzeSymptoms({
+          petType,
+          symptoms: symptomText,
+          petAge: petAge ? Number(petAge) : undefined
+        });
       }
 
-      // Render structured panel and also build a short guidance list for the sidebar
-      setStructured(data);
+      if (!result.ok) {
+        throw new Error(result.error || 'AI analysis failed');
+      }
+
+      // Transform the response to match our expected format
+      const data: SymptomAnalysisResponse = {
+        conditions: Array.isArray(result.data.conditions)
+          ? result.data.conditions.map((c: AICondition | string) => ({
+              name: typeof c === 'string' ? c : c.name || 'Unknown condition',
+              urgency: result.data.overallUrgency === 'high' ? 'high' :
+                      result.data.overallUrgency === 'moderate' ? 'moderate' : 'low',
+              description: typeof c === 'object' && c.rationale ? c.rationale : 'Further evaluation needed',
+              firstAidTips: Array.isArray(result.data.careTips) ? result.data.careTips.slice(0, 3) : [],
+              recommendations: []
+            }))
+          : [{
+              name: 'Analysis completed',
+              urgency: result.data.overallUrgency === 'high' ? 'high' :
+                      result.data.overallUrgency === 'moderate' ? 'moderate' : 'low',
+              description: 'Please review the care tips below',
+              firstAidTips: Array.isArray(result.data.careTips) ? result.data.careTips.slice(0, 3) : [],
+              recommendations: []
+            }],
+        overallUrgency: result.data.overallUrgency === 'high' ? 'high' :
+                       result.data.overallUrgency === 'moderate' ? 'moderate' : 'low',
+        disclaimerShown: true
+      };
+
+    // Render structured panel and also build a short guidance list for the sidebar
+    setStructured(data);
       const guidance: string[] = [];
       if (data.overallUrgency === 'high') {
-        guidance.push("� URGENT: Symptoms may indicate a serious issue. Seek veterinary care promptly.");
+        guidance.push("🚨 URGENT: Symptoms may indicate a serious issue. Seek veterinary care promptly.");
       }
       data.conditions.slice(0, 3).forEach(c => {
         if (c.firstAidTips?.length) guidance.push(`🩺 ${c.name}: ${c.firstAidTips[0]}`);
         else guidance.push(`🩺 ${c.name}: see recommendations`);
       });
       setResults(guidance);
+    // Trigger history reload (SymptomCheckHistory will refetch when key changes)
+    setHistoryRefreshKey((k) => k + 1);
+    toast({ title: 'Analysis saved', description: 'Your AI analysis has been saved to your account.', variant: 'default' });
     } catch (err) {
       console.error(err);
-      toast({ title: "Error", description: "Failed to analyze symptoms.", variant: "destructive" });
+      // Detect rate limit (429) or backend usage-limit messages
+      const status = err?.response?.status;
+      const serverMsg = err?.response?.data?.message || err?.message || '';
+
+      if (status === 429 || /usage limit/i.test(serverMsg) || /AI service usage limit/i.test(serverMsg)) {
+        // Get Retry-After header if provided (in seconds)
+        const retryAfterHeader = err?.response?.headers?.['retry-after'];
+        let retrySeconds: number | undefined;
+        if (retryAfterHeader) {
+          const parsed = parseInt(retryAfterHeader, 10);
+          if (!isNaN(parsed)) retrySeconds = parsed;
+        }
+
+        const friendly = serverMsg || '🐾 Our AI assistant has reached its limit. Please try again in about an hour.';
+        setRateLimited({ message: friendly, retryAfterSeconds: retrySeconds });
+        if (retrySeconds) setCooldownLeft(retrySeconds);
+
+        toast({ title: 'Notice', description: friendly, variant: 'default' });
+      } else {
+        toast({ title: "Error", description: "Failed to analyze symptoms.", variant: "destructive" });
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  // cooldown timer effect
+  useState(() => {
+    let interval: number | undefined;
+    if (cooldownLeft && cooldownLeft > 0) {
+      interval = window.setInterval(() => {
+        setCooldownLeft((c) => (c ? c - 1 : null));
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  });
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, hsl(310 60% 99%), hsl(297 30% 97%), hsl(330 60% 98%))' }}>
@@ -339,8 +419,29 @@ export default function SymptomChecker() {
         </div>
 
         {/* AI Analysis History */}
+        {rateLimited && (
+          <div className="mb-6">
+            <Alert variant="destructive">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-700 mt-0.5" />
+                <div>
+                  <AlertTitle>AI temporarily unavailable</AlertTitle>
+                  <AlertDescription>
+                    <div className="text-sm">You've reached the AI usage limit. Please try again in about an hour.</div>
+                    {cooldownLeft !== null && (
+                      <div className="mt-2 text-xs text-muted-foreground">Retry in {Math.max(1, Math.ceil(cooldownLeft / 60))} minute(s)</div>
+                    )}
+                    <div className="mt-2 text-xs">
+                      <a href="mailto:support@happytails.com" className="underline">Contact support</a> if you need help.
+                    </div>
+                  </AlertDescription>
+                </div>
+              </div>
+            </Alert>
+          </div>
+        )}
         <div className="mt-12">
-          <SymptomCheckHistory />
+          <SymptomCheckHistory refreshKey={historyRefreshKey} />
         </div>
       </div>
     </div>

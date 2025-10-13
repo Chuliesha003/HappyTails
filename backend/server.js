@@ -4,6 +4,13 @@ const cors = require('cors');
 const helmet = require('helmet');
 const swaggerUi = require('swagger-ui-express');
 require('dotenv').config();
+
+// Check for required environment variables
+if (!process.env.GEMINI_API_KEY) {
+  console.error('❌ Missing GEMINI_API_KEY in .env');
+  process.exit(1);
+}
+
 const connectDB = require('./config/database');
 const { initializeFirebase } = require('./config/firebase');
 const { initializeGemini } = require('./utils/geminiService');
@@ -181,6 +188,7 @@ const resourceRoutes = require('./routes/resourceRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/pets', petRoutes);
@@ -191,6 +199,7 @@ app.use('/api/resources', resourceRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Test routes (for authentication testing)
 const testRoutes = require('./routes/testRoutes');
@@ -211,6 +220,8 @@ const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Access the API at: http://localhost:${PORT}`);
+  console.log("✅ GEMINI API loaded:", !!process.env.GEMINI_API_KEY);
+
   
   // Log server startup
   logSystem('server_started', {

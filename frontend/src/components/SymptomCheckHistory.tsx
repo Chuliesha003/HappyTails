@@ -8,7 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { History, AlertTriangle, Clock, Eye, Calendar } from "lucide-react";
 import type { SymptomCheck } from "@/types/api";
 
-export default function SymptomCheckHistory() {
+export default function SymptomCheckHistory({ refreshKey }: { refreshKey?: number }) {
   const { isRegistered } = useAuth();
   const [history, setHistory] = useState<SymptomCheck[]>([]);
   const [loading, setLoading] = useState(false);
@@ -19,6 +19,14 @@ export default function SymptomCheckHistory() {
       loadHistory();
     }
   }, [isRegistered]);
+
+  // Reload when refreshKey changes (triggered after new analysis saved)
+  useEffect(() => {
+    if (isRegistered() && typeof refreshKey !== 'undefined') {
+      loadHistory();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
 
   const loadHistory = async () => {
     setLoading(true);
@@ -112,98 +120,49 @@ export default function SymptomCheckHistory() {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {history.map((check) => (
-              <div key={check._id} className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-900">
-                        {formatDate(check.createdAt)}
-                      </span>
-                      {check.pet && (
-                        <Badge variant="outline" className="text-xs">
-                          {check.pet.name} ({check.pet.species})
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={`text-xs border ${getUrgencyColor(check.aiResponse.urgencyLevel)}`}>
-                        {check.aiResponse.urgencyLevel.toUpperCase()}
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleExpanded(check._id)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
+              <div key={check._id} className="rounded-lg border bg-white shadow-sm overflow-hidden">
+                <div className="px-4 py-3 bg-gradient-to-r from-pink-600 to-purple-600 text-white flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <History className="h-4 w-4" />
+                    <div className="text-sm font-semibold">AI Analysis</div>
+                  </div>
+                  <div className="text-xs font-semibold">
+                    <span className={`px-2 py-1 rounded-full ${getUrgencyColor(check.aiResponse.urgencyLevel)}`}>{check.aiResponse.urgencyLevel}</span>
                   </div>
                 </div>
 
-                <div className="px-4 py-3">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-700 line-clamp-2">
-                        {check.symptoms}
-                      </p>
-                    </div>
+                <div className="p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs text-muted-foreground">{formatDate(check.createdAt)}</div>
+                    {check.pet && (
+                      <Badge variant="outline" className="text-xs">
+                        {check.pet.name}
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="text-sm text-gray-700 line-clamp-3 mb-3">{check.symptoms}</div>
+
+                  <div className="flex items-center justify-between">
+                    <button onClick={() => toggleExpanded(check._id)} className="text-xs text-primary underline">View</button>
+                    <div className="text-xs text-muted-foreground">{check.aiResponse.possibleConditions?.length || 0} conditions</div>
                   </div>
 
                   {expandedItems.has(check._id) && (
-                    <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900 mb-2">AI Analysis Summary</h4>
-                        <div className="space-y-2">
-                          {check.aiResponse.possibleConditions.slice(0, 3).map((condition, idx) => (
-                            <div key={idx} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded">
-                              <span className="text-sm font-medium text-gray-900">{condition.name}</span>
-                              <Badge className={`text-xs ${getUrgencyColor(condition.severity)}`}>
-                                {condition.severity}
-                              </Badge>
-                            </div>
-                          ))}
+                    <div className="mt-3 pt-3 border-t border-gray-100 text-sm text-gray-700 space-y-2">
+                      {check.aiResponse.possibleConditions.slice(0, 3).map((c, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <div>{c.name}</div>
+                          <div className={`text-xs ${getUrgencyColor(c.severity)}`}>{c.severity || 'unknown'}</div>
                         </div>
-                      </div>
-
-                      {check.aiResponse.recommendations.length > 0 && (
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-900 mb-2">Recommendations</h4>
-                          <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
-                            {check.aiResponse.recommendations.slice(0, 3).map((rec, idx) => (
-                              <li key={idx}>{rec}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      <div className="text-xs text-gray-500 pt-2 border-t border-gray-200">
-                        Follow-up action: {check.followUpAction}
-                        {check.appointmentBooked && " • Appointment booked"}
-                      </div>
+                      ))}
                     </div>
                   )}
                 </div>
               </div>
             ))}
-
-            {history.length >= 20 && (
-              <div className="text-center pt-4">
-                <Button
-                  variant="outline"
-                  onClick={loadHistory}
-                  disabled={loading}
-                  className="border-pink-300 text-pink-600 hover:bg-pink-50"
-                >
-                  <Clock className="h-4 w-4 mr-2" />
-                  Load More History
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </CardContent>

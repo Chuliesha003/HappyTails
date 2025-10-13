@@ -43,7 +43,9 @@ const aiLimiter = rateLimit({
   max: 10, // Limit each IP to 10 requests per hour
   message: {
     success: false,
-    message: 'AI service usage limit exceeded. Please try again in an hour.',
+    code: 429,
+    message:
+      "🐾 Our AI is resting after too many analyses. Please try again in about an hour to avoid exceeding the limit.",
   },
   standardHeaders: true,
   legacyHeaders: false,

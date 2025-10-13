@@ -149,12 +149,7 @@ const Login = () => {
             </Link>
           </div>
           
-          {/* Subtle demo hint */}
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg border">
-            <p className="text-xs text-gray-600 text-center">
-              💡 <strong>Demo Mode:</strong> Admin: demo.admin@happytails.com | User: demo.user@happytails.com (password: demo123)
-            </p>
-          </div>
+          {/* Demo hint removed per request */}
           
           <div className="mt-6 text-center">
             <Link to="/" className="text-sm text-muted-foreground hover:underline">
