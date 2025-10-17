@@ -16,10 +16,11 @@ const initializeGemini = () => {
     }
 
     genAI = new GoogleGenerativeAI(config.gemini.apiKey);
-  model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-  visionModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const modelName = config.gemini.model || 'gemini-1.5-flash';
+    model = genAI.getGenerativeModel({ model: modelName });
+    visionModel = genAI.getGenerativeModel({ model: modelName });
 
-    console.log('✅ Gemini AI initialized successfully');
+    console.log(`✅ Gemini AI initialized successfully with model: ${modelName}`);
     return model;
   } catch (error) {
     console.error('❌ Gemini AI initialization error:', error.message);
@@ -45,27 +46,42 @@ const analyzeSymptoms = async (symptomData) => {
     const { petType, symptoms, duration, severity, additionalInfo, imageBase64, imageMimeType } = symptomData;
 
     // Construct detailed prompt for veterinary symptom analysis
+    // Ask the model to return structured JSON describing each detected condition and overall guidance.
     const prompt = `
-You are a veterinary assistant AI helping pet owners understand their pet's symptoms. 
-Provide helpful, educational information but always remind users to consult a real veterinarian for proper diagnosis and treatment.
+You are a veterinary assistant AI. Produce ONLY valid JSON (no extra text) that exactly matches the following JSON Schema and uses the enum values specified.
 
-Pet Information:
+JSON Schema (example):
+{
+  "urgencyLevel": "low|medium|high|emergency",
+  "summary": "Short summary sentence for the owner",
+  "conditions": [
+    {
+      "name": "Condition name",
+      "likelihoodRank": 1,
+      "summary": "Short description",
+      "severity": "low|medium|high|emergency",
+      "confidence": 0,
+      "immediateCare": ["list of steps"],
+      "redFlags": ["list of red flag signs"],
+      "prevention": ["list of prevention tips"],
+      "whatToTellVet": "one-line summary to copy to vet"
+    }
+  ],
+  "recommendations": ["string"]
+}
+
+Rules:
+- Use the exact enum values for 'urgencyLevel' and each condition's 'severity': one of: low, medium, high, emergency.
+- Return up to 3 conditions in the 'conditions' array.
+- All fields should be plain text (no markdown). Keep summaries concise (1-2 sentences).
+- Do NOT include any explanatory text outside the JSON. The response must be parseable JSON.
+
+Patient details:
 - Type: ${petType}
 - Symptoms: ${symptoms}
 - Duration: ${duration || 'Not specified'}
 - Severity: ${severity || 'Not specified'}
 ${additionalInfo ? `- Additional Info: ${additionalInfo}` : ''}
-
-Please provide:
-1. Possible Causes: List 3-5 potential causes for these symptoms (from most to least likely)
-2. Severity Assessment: Rate the urgency (Low/Moderate/High/Emergency)
-3. Immediate Care: What the owner can do right now
-4. When to See a Vet: Clear guidance on when professional help is needed
-5. Prevention Tips: How to prevent similar issues in the future
-
-Important: Always emphasize that this is educational information only and not a substitute for professional veterinary care.
-
-Format your response in a clear, structured manner with bullet points.
 `;
 
     let result;
@@ -86,22 +102,36 @@ Format your response in a clear, structured manner with bullet points.
     const response = await result.response;
     const analysisText = response.text();
 
-    // Parse the response into structured data
-    const analysis = {
-      rawAnalysis: analysisText,
+    // The model should return only JSON. Parse it robustly.
+    let parsed;
+    try {
+      parsed = JSON.parse(analysisText);
+    } catch (err) {
+      // Some models may include stray text. Try to extract the first JSON object in the text.
+      const match = analysisText.match(/\{[\s\S]*\}/);
+      if (match) {
+        parsed = JSON.parse(match[0]);
+      } else {
+        throw new Error('AI returned non-JSON response');
+      }
+    }
+
+    // Minimal validation and return both raw text and parsed object for traceability.
+    const normalized = {
+      rawText: analysisText,
+      rawParsed: parsed,
       petType,
       symptoms,
       timestamp: new Date().toISOString(),
       disclaimer: 'This analysis is for educational purposes only. Please consult a licensed veterinarian for proper diagnosis and treatment.',
+      // Keep the top-level fields for backwards compatibility (map urgencyLevel if provided)
+      urgencyLevel: parsed.urgencyLevel || parsed.overallUrgency || 'medium',
+      summary: parsed.summary || '',
+      conditions: Array.isArray(parsed.conditions) ? parsed.conditions.slice(0,3) : [],
+      recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
     };
 
-    // Try to extract severity level
-    const severityMatch = analysisText.match(/(?:urgency|severity)[:\s]*(Low|Moderate|High|Emergency)/i);
-    if (severityMatch) {
-      analysis.urgency = severityMatch[1];
-    }
-
-    return analysis;
+    return normalized;
   } catch (error) {
     console.error('Gemini AI analysis error:', error);
     
