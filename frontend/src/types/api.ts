@@ -270,6 +270,18 @@ export interface SymptomAnalysisResponse {
   }>;
   overallUrgency: 'low' | 'moderate' | 'high';
   disclaimerShown: boolean;
+  // Optional detailed per-condition responses populated by the backend
+  detailedResponses?: Record<
+    string,
+    {
+      headline: string;
+      summary: string;
+      immediateCare?: string[];
+      redFlags?: string[];
+      prevention?: string[];
+      whatToTellVet?: string;
+    }
+  >;
 }
 
 // Symptom Check Types

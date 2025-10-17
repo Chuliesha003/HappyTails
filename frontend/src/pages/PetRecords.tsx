@@ -230,6 +230,12 @@ const PetRecords = () => {
       photoFile: null
     });
     setEditingPetId(pet.id);
+    
+    // Scroll to the form at the top with smooth animation
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   };
 
   const handleDeletePet = async (petId: string, petName: string) => {
@@ -1145,14 +1151,6 @@ const PetRecords = () => {
                         {pet.species} • {pet.breed}
                       </p>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleEditPet(pet)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">

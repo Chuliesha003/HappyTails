@@ -228,6 +228,8 @@ export default function SymptomChecker() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  
                   <div>
                     <Label className="text-sm text-gray-700">Age (years)</Label>
                     <Input type="number" min={0} step="0.1" value={petAge} onChange={(e) => setPetAge(e.target.value)} className="mt-1" />
@@ -335,17 +337,17 @@ export default function SymptomChecker() {
                     <div className="flex items-center gap-2 mb-4">
                       <span className="text-sm font-medium text-gray-700">Overall Urgency:</span>
                       <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                        structured.overallUrgency === 'high' 
+                        structured?.overallUrgency === 'high' 
                           ? 'bg-red-100 text-red-800' 
-                          : structured.overallUrgency === 'moderate' 
+                          : structured?.overallUrgency === 'moderate' 
                             ? 'bg-yellow-100 text-yellow-800' 
                             : 'bg-green-100 text-green-800'
                       }`}>
-                        {structured.overallUrgency.toUpperCase()}
+                        {(structured?.overallUrgency || 'low').toUpperCase()}
                       </span>
                     </div>
                     
-                    {structured.overallUrgency === 'high' && (
+                    {structured?.overallUrgency === 'high' && (
                       <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                         <div className="flex items-center gap-2 text-red-800 font-semibold mb-2">
                           <AlertCircle className="h-5 w-5" />
@@ -361,7 +363,7 @@ export default function SymptomChecker() {
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-900">Possible Conditions</h3>
                     <div className="grid gap-4 md:grid-cols-2">
-                      {structured.conditions.map((c, idx) => (
+                      {(structured?.conditions || []).map((c, idx) => (
                         <div key={idx} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="font-medium text-gray-900">{c.name}</h4>
@@ -391,6 +393,30 @@ export default function SymptomChecker() {
                               <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
                                 {c.recommendations.map((tip, i) => <li key={i}>{tip}</li>)}
                               </ul>
+                            </div>
+                          )}
+
+                          {/* Show tailored detailed response if provided by backend */}
+                          {structured?.detailedResponses && structured.detailedResponses[c.name] && (
+                            <div className="mt-4 bg-gray-50 border border-gray-100 rounded p-3">
+                              <div className="text-sm font-semibold text-gray-900 mb-1">{structured.detailedResponses[c.name].headline}</div>
+                              <p className="text-sm text-gray-700 mb-2">{structured.detailedResponses[c.name].summary}</p>
+                              {structured.detailedResponses[c.name].immediateCare?.length > 0 && (
+                                <div className="mb-2">
+                                  <div className="text-sm font-medium text-gray-900">Immediate Care</div>
+                                  <ul className="list-disc pl-5 text-sm text-gray-700">
+                                    {structured.detailedResponses[c.name].immediateCare.map((t: string, i: number) => <li key={i}>{t}</li>)}
+                                  </ul>
+                                </div>
+                              )}
+                              {structured.detailedResponses[c.name].redFlags?.length > 0 && (
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">Red flags</div>
+                                  <ul className="list-disc pl-5 text-sm text-gray-700">
+                                    {structured.detailedResponses[c.name].redFlags.map((t: string, i: number) => <li key={i}>{t}</li>)}
+                                  </ul>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

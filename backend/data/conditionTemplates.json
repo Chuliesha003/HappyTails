@@ -1,0 +1,90 @@
+{
+  "Gastroenteritis": {
+    "headline": "Gastroenteritis — Stomach/intestinal inflammation",
+    "summary": "Vomiting and decreased appetite are common signs. Causes include dietary indiscretion, mild infections, or irritation. Most mild cases resolve with supportive care, but monitor closely.",
+    "immediateCare": [
+      "Withhold food for 6–12 hours for adult dogs; allow small sips of water.",
+      "Monitor for dehydration and offer small amounts of water frequently.",
+      "If vomiting stops, give small bland meals (boiled chicken and rice) in tiny portions before resuming normal diet."
+    ],
+    "redFlags": [
+      "Repeated vomiting or ongoing vomiting for >24 hours",
+      "Blood in vomit or stool",
+      "Severe lethargy or signs of dehydration"
+    ],
+    "prevention": [
+      "Avoid table scraps and sudden diet changes",
+      "Keep garbage and foreign foods out of reach"
+    ],
+    "whatToTellVet": "Vomiting started [duration], frequency [#], appetite [reduced/normal], any access to garbage or new food?"
+  },
+  "Foreign body": {
+    "headline": "Possible foreign body / obstruction",
+    "summary": "Ingested objects can block the gastrointestinal tract and quickly become an emergency. Repeated vomiting, retching, and abdominal pain are suspicious signs.",
+    "immediateCare": [
+      "Do not attempt to induce vomiting without veterinary advice.",
+      "Keep the pet calm and withhold food until evaluated.",
+      "Seek veterinary attention promptly — imaging may be needed."
+    ],
+    "redFlags": [
+      "Non-productive retching (trying to vomit with nothing produced)",
+      "Repeated vomiting, abdominal pain, or distension"
+    ],
+    "prevention": [
+      "Supervise pets with small objects and remove swallowable items",
+      "Provide appropriate chew toys"
+    ],
+    "whatToTellVet": "Describe what (if anything) was swallowed, timeline of vomiting, behavior, and whether the pet is still passing stool."
+  },
+  "Pancreatitis": {
+    "headline": "Pancreatitis — Inflammation of the pancreas",
+    "summary": "Pancreatitis can cause sudden severe vomiting, abdominal pain, and lethargy. It often follows ingestion of fatty food but can occur spontaneously.",
+    "immediateCare": [
+      "Seek veterinary evaluation — supportive care often requires fluids and pain control.",
+      "Do not feed and avoid giving any medications without veterinary instruction."
+    ],
+    "redFlags": [
+      "Severe or repeated vomiting, abdominal pain (hunched posture)",
+      "Marked lethargy or collapse"
+    ],
+    "prevention": [
+      "Avoid fatty foods and table scraps",
+      "Feed a consistent, appropriate diet"
+    ],
+    "whatToTellVet": "Note recent dietary changes or access to fatty foods, frequency of vomiting, and any abdominal pain or behavioral changes."
+  },
+  "Toxin ingestion": {
+    "headline": "Possible toxin ingestion",
+    "summary": "Many household foods, plants, and chemicals are toxic to pets. If ingestion is suspected, rapid action is needed.",
+    "immediateCare": [
+      "If you suspect poisoning, contact your veterinarian or animal poison control immediately.",
+      "Do not induce vomiting unless specifically instructed."
+    ],
+    "redFlags": [
+      "Sudden onset of severe vomiting, drooling, tremors, seizures",
+      "Known access to a toxic substance"
+    ],
+    "prevention": [
+      "Store chemicals, medications, and toxic plants out of reach",
+      "Supervise pets around human food and trash"
+    ],
+    "whatToTellVet": "Specify the substance (if known), time of exposure, amount (if known), and current symptoms."
+  },
+  "Kidney disease": {
+    "headline": "Potential kidney-related illness",
+    "summary": "Vomiting accompanied by increased or decreased urination, changes in thirst, or lethargy may suggest kidney involvement and needs veterinary assessment.",
+    "immediateCare": [
+      "Ensure access to water and monitor drinking and urination",
+      "Seek veterinary evaluation if urine changes, weakness, or repeated vomiting occur"
+    ],
+    "redFlags": [
+      "Marked changes in drinking or urination",
+      "Severe lethargy, collapse, or persistent vomiting"
+    ],
+    "prevention": [
+      "Keep pets hydrated and maintain regular wellness exams",
+      "Follow veterinarian advice on diets for at-risk animals"
+    ],
+    "whatToTellVet": "Provide info on drinking/urination changes, any pre-existing kidney disease, and medication use."
+  }
+}
