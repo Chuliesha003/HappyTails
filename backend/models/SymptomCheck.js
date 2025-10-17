@@ -82,6 +82,11 @@ const symptomCheckSchema = new mongoose.Schema(
       
       // General recommendations
       recommendations: [String],
+
+      // Raw AI JSON (for traceability) - store the parsed JSON returned by Gemini
+      rawAI: {
+        type: Object,
+      },
       
       // Medical disclaimer
       disclaimer: {
