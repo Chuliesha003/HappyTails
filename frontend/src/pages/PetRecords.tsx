@@ -155,15 +155,20 @@ const PetRecords = () => {
 
       if (editingPetId) {
         // Update existing pet
+        console.log('Updating existing pet:', editingPetId);
         const updated = await petsService.updatePet(editingPetId, petData);
         
         // Upload photo if provided
         if (formData.photoFile) {
+          console.log('Uploading new photo for pet:', editingPetId);
           await petsService.uploadPhoto(editingPetId, formData.photoFile);
+          console.log('Photo uploaded, refreshing pet data');
           // Refresh pet data to get updated photo URL
           const refreshedPet = await petsService.getPetById(editingPetId);
           setPets(prev => prev.map(p => p.id === editingPetId ? refreshedPet : p));
+          console.log('Pet data refreshed with new photo');
         } else {
+          console.log('No new photo to upload');
           setPets(prev => prev.map(p => p.id === editingPetId ? updated : p));
         }
         
@@ -501,14 +506,17 @@ const PetRecords = () => {
                       type="file"
                       accept="image/*"
                       className="hidden"
+                      key={editingPetId || 'new'} // Force reset when switching pets
                       onChange={(e) => {
                         const file = e.target.files?.[0];
+                        console.log('File selected:', file?.name, 'Size:', file?.size);
                         if (file) {
                           setFormData(prev => ({
                             ...prev,
                             photoFile: file,
                             photoUrl: URL.createObjectURL(file)
                           }));
+                          console.log('Photo preview updated');
                         }
                       }}
                     />
