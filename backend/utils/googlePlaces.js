@@ -1,6 +1,7 @@
 const axios = require('axios');
 
-const GOOGLE_PLACES_BASE = 'https://maps.googleapis.com/maps/api/place';
+// Use the new Places API
+const GOOGLE_PLACES_NEW_API = 'https://places.googleapis.com/v1/places:searchNearby';
 
 function kmToMeters(km) {
   const n = parseFloat(km);
@@ -9,7 +10,7 @@ function kmToMeters(km) {
 }
 
 /**
- * Search nearby veterinary clinics/hospitals using Google Places
+ * Search nearby veterinary clinics/hospitals using Google Places (New API)
  * @param {number} lat
  * @param {number} lng
  * @param {number} radiusKm
@@ -25,34 +26,43 @@ async function searchNearbyVets(lat, lng, radiusKm = 50) {
 
   const radius = kmToMeters(radiusKm);
 
-  // Nearby Search for type=veterinary_care around location
-  const url = `${GOOGLE_PLACES_BASE}/nearbysearch/json`;
-
-  const params = {
-    key: apiKey,
-    location: `${lat},${lng}`,
-    radius,
-    type: 'veterinary_care',
-    keyword: 'veterinarian animal pet',
+  // Use the new Places API with searchNearby
+  const requestBody = {
+    includedTypes: ['veterinary_care'],
+    maxResultCount: 20,
+    locationRestriction: {
+      circle: {
+        center: {
+          latitude: lat,
+          longitude: lng,
+        },
+        radius: radius,
+      },
+    },
   };
 
-  const { data } = await axios.get(url, { params });
-  if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-    const err = new Error(`Google Places error: ${data.status}`);
-    err.code = 'GOOGLE_PLACES_ERROR';
-    err.details = data.error_message;
-    throw err;
-  }
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-Goog-Api-Key': apiKey,
+    'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.types',
+  };
 
-  const results = (Array.isArray(data.results) ? data.results : []).filter((p) => {
+  try {
+    const { data } = await axios.post(GOOGLE_PLACES_NEW_API, requestBody, { headers });
+    
+    if (!data.places) {
+      return [];
+    }
+
+    const results = data.places.filter((p) => {
     const types = Array.isArray(p.types) ? p.types : [];
     // Strictly ensure the place is for animals: must include 'veterinary_care'
     if (!types.includes('veterinary_care')) return false;
     
     // Must include vet-specific keywords in name
-    const name = (p.name || '').toLowerCase();
-    const vicinity = (p.vicinity || p.formatted_address || '').toLowerCase();
-    const text = `${name} ${vicinity}`;
+    const name = (p.displayName?.text || '').toLowerCase();
+    const address = (p.formattedAddress || '').toLowerCase();
+    const text = `${name} ${address}`;
     
     // Must have at least one vet indicator
     const vetKeywords = ['vet', 'animal', 'pet', 'clinic', 'hospital'];
@@ -69,22 +79,22 @@ async function searchNearbyVets(lat, lng, radiusKm = 50) {
 
   // Map to a Vet-like shape consumed by the frontend
   return results.map((p) => {
-    const lat = p.geometry?.location?.lat;
-    const lng = p.geometry?.location?.lng;
+    const lat = p.location?.latitude;
+    const lng = p.location?.longitude;
     return {
-      id: p.place_id,
-      name: p.name,
+      id: p.id,
+      name: p.displayName?.text || 'Veterinary Clinic',
       phoneNumber: '', // requires Place Details; omitted to reduce quota usage
-      clinicName: p.name,
-      address: p.vicinity || p.formatted_address || '',
+      clinicName: p.displayName?.text || 'Veterinary Clinic',
+      address: p.formattedAddress || '',
       rating: p.rating,
-      reviewCount: p.user_ratings_total,
+      reviewCount: p.userRatingCount,
       isVerified: false,
       specialization: 'Veterinary Care',
       location: lat != null && lng != null ? {
         type: 'Point',
         coordinates: [lng, lat],
-        address: p.vicinity || p.formatted_address || '',
+        address: p.formattedAddress || '',
         city: undefined,
         state: undefined,
         zipCode: undefined,
@@ -92,6 +102,23 @@ async function searchNearbyVets(lat, lng, radiusKm = 50) {
       } : undefined,
     };
   });
+  } catch (error) {
+    console.error('[GOOGLE_PLACES_ERROR] API call failed:', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: GOOGLE_PLACES_NEW_API,
+      apiKeyPresent: !!apiKey,
+      apiKeyPrefix: apiKey ? apiKey.substring(0, 10) + '...' : 'none'
+    });
+    
+    // Re-throw with more context
+    const err = new Error(`Google Places error: ${error.response?.data?.error?.message || error.message}`);
+    err.code = 'GOOGLE_PLACES_ERROR';
+    err.details = error.response?.data?.error?.message;
+    throw err;
+  }
 }
 
 module.exports = {

@@ -49,7 +49,12 @@ async function searchNearbyVets(req, res) {
     const live = await placesNearby(lat, lng, maxDistanceKm);
     return res.json(live.map(toSafe));
   } catch (err) {
-    console.error('[VET_NEARBY_ERROR]', err);
+    console.error('[VET_NEARBY_ERROR] Full error details:', {
+      message: err.message,
+      code: err.code,
+      response: err.response?.data,
+      stack: err.stack
+    });
     res.status(500).json({ error: 'Failed to search nearby veterinarians' });
   }
 }
