@@ -29,6 +29,14 @@ export interface RegisterRequest {
   address?: string;
 }
 
+export interface FileAttachment {
+  id?: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string; // 'pdf', 'doc', 'docx', 'image', etc.
+  uploadedAt?: string;
+}
+
 export interface AuthResponse {
   user: User;
   token: string;
@@ -73,6 +81,7 @@ export interface MedicalRecord {
   veterinarian?: string;
   notes?: string;
   medications?: Medication[];
+  attachments?: FileAttachment[];
 }
 
 export interface Vaccination {
@@ -90,6 +99,7 @@ export interface VaccineCard {
   issuingAuthority?: string;
   cardImageUrl?: string;
   notes?: string;
+  attachments?: FileAttachment[];
 }
 
 export interface MedicalReport {
