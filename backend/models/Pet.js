@@ -1,5 +1,27 @@
 const mongoose = require('mongoose');
 
+const fileAttachmentSchema = new mongoose.Schema({
+  fileName: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  fileUrl: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  fileType: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  uploadedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const vaccinationSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -47,6 +69,7 @@ const vaccineCardSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  attachments: [fileAttachmentSchema],
 });
 
 const medicalReportSchema = new mongoose.Schema({
@@ -222,6 +245,7 @@ const medicalRecordSchema = new mongoose.Schema({
       duration: String,
     },
   ],
+  attachments: [fileAttachmentSchema],
 });
 
 const petSchema = new mongoose.Schema(
