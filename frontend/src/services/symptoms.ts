@@ -6,21 +6,27 @@ export const symptomsService = {
   /**
    * Analyze symptoms using AI
    */
-  analyzeSymptoms: async (data: SymptomAnalysisRequest): Promise<SymptomAnalysisResponse> => {
+  analyzeSymptoms: async (data: SymptomAnalysisRequest): Promise<{ ok: boolean; data?: any; error?: string }> => {
     try {
-      const response = await api.post<unknown>(
-        '/symptom-checker/analyze',
-        data
-      );
-      // Backend may return { success, data } or direct payload
-      const r = response as Record<string, unknown>;
-      if (r && 'conditions' in r) return r as unknown as SymptomAnalysisResponse;
-      if (r && 'data' in r && r.data && typeof r.data === 'object' && 'conditions' in (r.data as object)) {
-        return r.data as SymptomAnalysisResponse;
+      // api.post returns response.data already
+      const response = await api.post<unknown>('/symptom-checker/analyze', data);
+      const r = response as Record<string, any>;
+
+      // If backend uses { success, data } shape
+      if (r && typeof r === 'object' && ('success' in r || 'ok' in r)) {
+        return { ok: !!r.success || !!r.ok, data: r.data, error: r.message || r.error };
       }
-      return r as unknown as SymptomAnalysisResponse;
+
+      // If backend returned direct payload (conditions etc.)
+      if (r && 'conditions' in r) {
+        return { ok: true, data: r };
+      }
+
+      // Fallback
+      return { ok: true, data: r };
     } catch (error) {
-      throw handleApiError(error);
+      const e = handleApiError(error);
+      return { ok: false, error: e.message };
     }
   },
 
@@ -32,7 +38,7 @@ export const symptomsService = {
     photo: File,
     petType?: string,
     petAge?: number
-  ): Promise<SymptomAnalysisResponse> => {
+  ): Promise<{ ok: boolean; data?: any; error?: string }> => {
     try {
       const formData = new FormData();
       formData.append('symptoms', symptoms);
@@ -46,18 +52,19 @@ export const symptomsService = {
         formData.append('petAge', petAge.toString());
       }
       
-      const response = await api.upload<unknown>(
-        '/symptom-checker/analyze',
-        formData
-      );
-      const r = response as Record<string, unknown>;
-      if (r && 'conditions' in r) return r as unknown as SymptomAnalysisResponse;
-      if (r && 'data' in r && r.data && typeof r.data === 'object' && 'conditions' in (r.data as object)) {
-        return r.data as SymptomAnalysisResponse;
+      const response = await api.upload<unknown>('/symptom-checker/analyze', formData);
+      const r = response as Record<string, any>;
+
+      if (r && typeof r === 'object' && ('success' in r || 'ok' in r)) {
+        return { ok: !!r.success || !!r.ok, data: r.data, error: r.message || r.error };
       }
-      return r as unknown as SymptomAnalysisResponse;
+
+      if (r && 'conditions' in r) return { ok: true, data: r };
+
+      return { ok: true, data: r };
     } catch (error) {
-      throw handleApiError(error);
+      const e = handleApiError(error);
+      return { ok: false, error: e.message };
     }
   },
 
