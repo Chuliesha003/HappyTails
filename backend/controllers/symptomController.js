@@ -8,7 +8,13 @@ const Pet = require('../models/Pet');
  */
 const checkSymptoms = async (req, res) => {
   try {
-  const { petType, symptoms, duration, severity, additionalInfo, petId, imageUrl, guestSession } = req.body;
+  const { petType, symptoms, duration, severity, additionalInfo, petId, imageUrl } = req.body;
+    // Allow frontend to omit guestSession; generate one for anonymous users so the model validation passes
+    let guestSession = req.body.guestSession;
+    if (!req.user && !guestSession) {
+      // lightweight guest session id
+      guestSession = `guest_${Date.now()}_${Math.floor(Math.random()*10000)}`;
+    }
 
     // Validate required fields
     if (!petType || !symptoms) {
@@ -59,17 +65,18 @@ const checkSymptoms = async (req, res) => {
       imageMimeType,
     });
 
-    // Save symptom check to database
+    // Save symptom check to database (initial basic structure)
     const symptomCheckData = {
       symptoms,
       aiResponse: {
-        possibleConditions: analysis.possibleConditions || [],
-        urgencyLevel: analysis.urgencyLevel || 'medium',
-        recommendations: analysis.recommendations || [],
+        possibleConditions: [],
+        urgencyLevel: 'medium',
+        recommendations: [],
         disclaimer: analysis.disclaimer || 'This is not a substitute for professional veterinary advice.',
+        rawAI: analysis.rawParsed || null,
       },
-      followUpAction: analysis.urgencyLevel === 'emergency' ? 'emergency' : 
-                       analysis.urgencyLevel === 'high' ? 'schedule' : 'monitor',
+      followUpAction: (analysis.urgencyLevel === 'emergency' || analysis.rawParsed?.urgencyLevel === 'emergency') ? 'emergency' : 
+                       (analysis.urgencyLevel === 'high' || analysis.rawParsed?.urgencyLevel === 'high') ? 'schedule' : 'monitor',
       imageUrl: imageUrl || null,
     };
 
@@ -95,34 +102,25 @@ const checkSymptoms = async (req, res) => {
     const symptomCheck = new SymptomCheck(symptomCheckData);
     await symptomCheck.save();
 
-    // Attempt to shape a structured response by heuristics from raw text
-    const parseConditions = (text) => {
-      const lines = text.split(/\n+/).map(l => l.trim()).filter(Boolean);
-      const conditions = [];
-      let current = null;
-      for (const l of lines) {
-        if (/^\d+\.|\u2022/.test(l) || (l.length < 60 && /^[A-Za-z].*/.test(l))) {
-          if (current) conditions.push(current);
-          current = { name: l.replace(/^\d+\.\s*/, ''), urgency: 'moderate', description: '', firstAidTips: [], recommendations: [] };
-        } else if (/immediate care|first aid/i.test(l)) {
-          if (current) current.firstAidTips.push(l);
-        } else if (/prevent|prevention|recommend/i.test(l)) {
-          if (current) current.recommendations.push(l);
-        } else {
-          if (current) current.description += (current.description ? ' ' : '') + l;
-        }
-      }
-      if (current) conditions.push(current);
-      return conditions.slice(0, 5);
-    };
+    // Use AI-provided structured fields and perform minimal normalization
+    const aiConditions = Array.isArray(analysis.conditions) ? analysis.conditions : Array.isArray(analysis.rawParsed?.conditions) ? analysis.rawParsed.conditions : [];
+    const overallUrgency = analysis.urgencyLevel || analysis.rawParsed?.urgencyLevel || 'medium';
 
-    const conditions = parseConditions(analysis.rawAnalysis || '');
-    const overallUrgency = (/emergency/i.test(analysis.rawAnalysis) ? 'high' : /high/i.test(analysis.rawAnalysis) ? 'high' : /moderate/i.test(analysis.rawAnalysis) ? 'moderate' : 'low');
+    // Normalize using shared util
+    const { normalizeConditions, mapUrgencyToEnum } = require('../utils/aiNormalization');
+    const normalizedConditions = normalizeConditions(aiConditions, overallUrgency);
+
+    symptomCheck.aiResponse = symptomCheck.aiResponse || {};
+    symptomCheck.aiResponse.possibleConditions = normalizedConditions;
+    symptomCheck.aiResponse.urgencyLevel = mapUrgencyToEnum(overallUrgency);
+    symptomCheck.aiResponse.recommendations = analysis.recommendations || analysis.rawParsed?.recommendations || [];
+
+    await symptomCheck.save();
 
     res.status(200).json({
       success: true,
       data: {
-        conditions,
+        conditions: aiConditions,
         overallUrgency,
         disclaimerShown: true,
       },
