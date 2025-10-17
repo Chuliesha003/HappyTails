@@ -197,7 +197,6 @@ const vetSchema = new mongoose.Schema(
 
 // Indexes for better query performance
 vetSchema.index({ email: 1 });
-vetSchema.index({ licenseNumber: 1 });
 vetSchema.index({ 'location.city': 1 });
 vetSchema.index({ specialization: 1 });
 vetSchema.index({ rating: -1 });

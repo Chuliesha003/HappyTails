@@ -18,10 +18,38 @@ function toSafe(v) {
 async function getAllVets(req, res) {
   try {
     const { city, specialization, search, verified } = req.query;
-    
-    // No mock data - return empty array or error message
-    console.log('[VET_GET_ALL] Mock data disabled - use /api/vets/nearby with location');
-    res.json([]);
+
+    // Build query
+    const query = { isActive: true };
+
+    if (city) {
+      query['location.city'] = new RegExp(city, 'i');
+    }
+
+    if (specialization) {
+      query.specialization = { $in: [new RegExp(specialization, 'i')] };
+    }
+
+    if (search) {
+      query.$or = [
+        { name: new RegExp(search, 'i') },
+        { clinicName: new RegExp(search, 'i') },
+        { 'location.city': new RegExp(search, 'i') },
+        { specialization: { $in: [new RegExp(search, 'i')] } }
+      ];
+    }
+
+    if (verified !== undefined) {
+      query.isVerified = verified === 'true';
+    }
+
+    const vets = await Vet.find(query)
+      .select('-password -__v')
+      .sort({ rating: -1, createdAt: -1 })
+      .limit(100);
+
+    console.log(`[VET_GET_ALL] Found ${vets.length} vets matching criteria`);
+    res.json(vets);
   } catch (err) {
     console.error('[VET_GET_ALL_ERROR]', err);
     res.status(500).json({ error: 'Failed to fetch veterinarians' });
@@ -43,11 +71,45 @@ async function searchNearbyVets(req, res) {
       return res.status(400).json({ error: 'Latitude/longitude required' });
     }
 
-    console.log(`[VET_NEARBY] lat=${lat}, lng=${lng}, radius=${maxDistanceKm}km - using Google Places only`);
-    
-    // Always use Google Places live data (no mock/DB data)
-    const live = await placesNearby(lat, lng, maxDistanceKm);
-    return res.json(live.map(toSafe));
+    console.log(`[VET_NEARBY] lat=${lat}, lng=${lng}, radius=${maxDistanceKm}km - searching database and Google Places`);
+
+    // First, search for vets in our database within the radius
+    let dbVets = [];
+    try {
+      dbVets = await Vet.findNearby(lng, lat, maxDistanceKm);
+      console.log(`[VET_NEARBY] Found ${dbVets.length} vets in database within ${maxDistanceKm}km`);
+    } catch (dbErr) {
+      console.warn('[VET_NEARBY] Database search failed:', dbErr.message);
+    }
+
+    // If we have enough vets from database, return them
+    if (dbVets.length >= 10) {
+      return res.json(dbVets.map(vet => vet.toSafeObject()));
+    }
+
+    // Otherwise, supplement with Google Places results
+    let placesVets = [];
+    try {
+      placesVets = await placesNearby(lat, lng, maxDistanceKm);
+      console.log(`[VET_NEARBY] Found ${placesVets.length} vets from Google Places`);
+    } catch (placesErr) {
+      console.warn('[VET_NEARBY] Google Places search failed:', placesErr.message);
+    }
+
+    // Combine database vets and Google Places vets, removing duplicates by name/location
+    const combinedVets = [...dbVets.map(vet => vet.toSafeObject())];
+    const existingNames = new Set(combinedVets.map(v => v.clinicName?.toLowerCase() || v.name?.toLowerCase()));
+
+    for (const placeVet of placesVets) {
+      const placeName = placeVet.clinicName?.toLowerCase() || placeVet.name?.toLowerCase();
+      if (!existingNames.has(placeName)) {
+        combinedVets.push(placeVet);
+        existingNames.add(placeName);
+      }
+    }
+
+    console.log(`[VET_NEARBY] Returning ${combinedVets.length} total vets (${dbVets.length} from DB, ${placesVets.length} from Places)`);
+    return res.json(combinedVets);
   } catch (err) {
     console.error('[VET_NEARBY_ERROR] Full error details:', {
       message: err.message,
