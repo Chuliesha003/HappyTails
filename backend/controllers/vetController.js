@@ -1,5 +1,6 @@
 // controllers/vetController.js
 const Vet = require('../models/Vet');
+const { searchNearbyVets: placesNearby } = require('../utils/googlePlaces');
 
 /* ---------------------- helpers ---------------------- */
 function pickNumber(...vals) {
@@ -17,15 +18,10 @@ function toSafe(v) {
 async function getAllVets(req, res) {
   try {
     const { city, specialization, search, verified } = req.query;
-    const filter = { isActive: true };
-
-    if (verified === 'true') filter.isVerified = true;
-    if (city) filter['location.city'] = new RegExp(city, 'i');
-    if (specialization) filter.specialization = { $in: [new RegExp(specialization, 'i')] };
-    if (search) filter.$text = { $search: search };
-
-    const vets = await Vet.find(filter).limit(100).sort({ rating: -1, createdAt: -1 });
-    res.json(vets.map(toSafe));
+    
+    // No mock data - return empty array or error message
+    console.log('[VET_GET_ALL] Mock data disabled - use /api/vets/nearby with location');
+    res.json([]);
   } catch (err) {
     console.error('[VET_GET_ALL_ERROR]', err);
     res.status(500).json({ error: 'Failed to fetch veterinarians' });
@@ -47,12 +43,11 @@ async function searchNearbyVets(req, res) {
       return res.status(400).json({ error: 'Latitude/longitude required' });
     }
 
-    console.log(`[VET_NEARBY] lat=${lat}, lng=${lng}, radius=${maxDistanceKm}km`);
-
-    // NOTE: Vet.findNearby expects (lng, lat, km)
-    const vets = await Vet.findNearby(lng, lat, maxDistanceKm);
-
-    res.json(vets.map(toSafe));
+    console.log(`[VET_NEARBY] lat=${lat}, lng=${lng}, radius=${maxDistanceKm}km - using Google Places only`);
+    
+    // Always use Google Places live data (no mock/DB data)
+    const live = await placesNearby(lat, lng, maxDistanceKm);
+    return res.json(live.map(toSafe));
   } catch (err) {
     console.error('[VET_NEARBY_ERROR]', err);
     res.status(500).json({ error: 'Failed to search nearby veterinarians' });

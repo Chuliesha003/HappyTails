@@ -19,6 +19,9 @@ const config = {
     apiKey: process.env.GEMINI_API_KEY,
     model: process.env.GEMINI_MODEL || 'gemini-1.5-flash'
   },
+  google: {
+    mapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+  },
   
   cors: {
     origin: process.env.FRONTEND_URL || 'http://localhost:8080'
@@ -32,7 +35,7 @@ const config = {
 };
 
 // Validate required environment variables
-const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
+const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET']; // GOOGLE_MAPS_API_KEY is optional but required for live vet search
 
 requiredEnvVars.forEach((varName) => {
   if (!process.env[varName]) {
