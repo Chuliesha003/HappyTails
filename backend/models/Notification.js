@@ -100,7 +100,6 @@ const notificationSchema = new mongoose.Schema(
     // Auto-expire notification after certain time
     expiresAt: {
       type: Date,
-      index: true,
     },
     
     // Sent via email

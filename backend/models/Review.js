@@ -36,7 +36,6 @@ const reviewSchema = new mongoose.Schema(
     appointment: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Appointment',
-      index: true,
     },
     
     // Rating (1-5 stars)
