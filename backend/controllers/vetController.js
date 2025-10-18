@@ -18,12 +18,21 @@ function toSafe(v) {
 async function getAllVets(req, res) {
   try {
     const { city, specialization, search, verified } = req.query;
+    const { licenseNumbers } = req.query;
 
     // Build query
     const query = { isActive: true };
 
     if (city) {
       query['location.city'] = new RegExp(city, 'i');
+    }
+
+    // Allow fetching specific vets by license numbers (comma-separated or array)
+    if (licenseNumbers) {
+      const list = Array.isArray(licenseNumbers) ? licenseNumbers : String(licenseNumbers).split(',').map(s => s.trim()).filter(Boolean);
+      if (list.length) {
+        query.licenseNumber = { $in: list };
+      }
     }
 
     if (specialization) {
@@ -49,7 +58,7 @@ async function getAllVets(req, res) {
       .limit(100);
 
     console.log(`[VET_GET_ALL] Found ${vets.length} vets matching criteria`);
-    res.json(vets);
+    res.json(vets.map(vet => vet.toSafeObject ? vet.toSafeObject() : vet));
   } catch (err) {
     console.error('[VET_GET_ALL_ERROR]', err);
     res.status(500).json({ error: 'Failed to fetch veterinarians' });
