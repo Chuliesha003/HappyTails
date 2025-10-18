@@ -2,6 +2,34 @@ import api, { handleApiError } from '@/lib/api';
 import type { AdminStats, User, UserListResponse, Appointment, Vet, Article, Pet, PaginationParams, Medication } from '@/types/api';
 
 // Admin Service
+// Internal: normalize Vet shape so legacy fields (active/verified)
+// and current fields (isActive/isVerified) are both present.
+function normalizeVet(vet: Partial<Vet>): Vet {
+  if (!vet || typeof vet !== 'object') return vet as Vet;
+  const obj = vet as Record<string, unknown>;
+
+  const isActive = typeof obj['isActive'] === 'boolean'
+    ? (obj['isActive'] as boolean)
+    : typeof obj['active'] === 'boolean'
+      ? (obj['active'] as boolean)
+      : false;
+
+  const isVerified = typeof obj['isVerified'] === 'boolean'
+    ? (obj['isVerified'] as boolean)
+    : typeof obj['verified'] === 'boolean'
+      ? (obj['verified'] as boolean)
+      : false;
+
+  return {
+    ...(vet as Vet),
+    // Ensure both key styles exist for UI components using either
+    isActive,
+    isVerified,
+    active: typeof obj['active'] === 'boolean' ? (obj['active'] as boolean) : isActive,
+    verified: typeof obj['verified'] === 'boolean' ? (obj['verified'] as boolean) : isVerified,
+  } as Vet;
+}
+
 export const adminService = {
   /**
    * Get admin dashboard statistics
@@ -115,8 +143,65 @@ export const adminService = {
    */
   getAllVets: async (params?: PaginationParams & { isVerified?: string; isActive?: string; search?: string }): Promise<{ vets: Vet[]; total: number; page: number; limit: number; pagination: { currentPage: number; totalPages: number; totalVets: number; hasMore: boolean } }> => {
     try {
-      const response = await api.get<{ vets: Vet[]; total: number; page: number; limit: number; pagination: { currentPage: number; totalPages: number; totalVets: number; hasMore: boolean } }>('/admin/vets', params as Record<string, unknown>);
-      return response;
+      const response = await api.get<{ data: Vet[]; pagination: { currentPage: number; totalPages: number; totalVets: number; hasMore: boolean } }>('/admin/vets', params as Record<string, unknown>);
+      // Backend returns 'data', but we return it as 'vets' for consistency
+      return {
+        vets: Array.isArray(response.data) ? response.data.map(normalizeVet) : [],
+        total: response.pagination.totalVets,
+        page: response.pagination.currentPage,
+        limit: params?.limit || 20,
+        pagination: response.pagination
+      };
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+
+  /**
+   * Get single vet by ID
+   */
+  getVetById: async (id: string): Promise<Vet> => {
+    try {
+      const response = await api.get<{ vet: Vet; data: Vet }>(`/admin/vets/${id}`);
+      const v = response.data || response.vet;
+      return normalizeVet(v);
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+
+  /**
+   * Create new vet
+   */
+  createVet: async (vetData: Partial<Vet>): Promise<Vet> => {
+    try {
+      const response = await api.post<{ vet: Vet; data: Vet }>('/admin/vets', vetData);
+      const v = response.data || response.vet;
+      return normalizeVet(v);
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+
+  /**
+   * Update vet
+   */
+  updateVet: async (id: string, vetData: Partial<Vet>): Promise<Vet> => {
+    try {
+      const response = await api.put<{ vet: Vet; data: Vet }>(`/admin/vets/${id}`, vetData);
+      const v = response.data || response.vet;
+      return normalizeVet(v);
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+
+  /**
+   * Delete vet
+   */
+  deleteVet: async (id: string): Promise<void> => {
+    try {
+      await api.delete(`/admin/vets/${id}`);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -127,8 +212,22 @@ export const adminService = {
    */
   toggleVetVerification: async (id: string): Promise<Vet> => {
     try {
-      const response = await api.patch<{ vet: Vet }>(`/admin/vets/${id}/verify`, {});
-      return response.vet;
+      const response = await api.patch<{ vet: Vet; data: Vet }>(`/admin/vets/${id}/verify`, {});
+      const v = response.data || response.vet;
+      return normalizeVet(v);
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+
+  /**
+   * Toggle vet active status
+   */
+  toggleVetStatus: async (id: string): Promise<Vet> => {
+    try {
+      const response = await api.patch<{ vet: Vet; data: Vet }>(`/admin/vets/${id}/status`, {});
+      const v = response.data || response.vet;
+      return normalizeVet(v);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -139,8 +238,20 @@ export const adminService = {
    */
   getAllArticles: async (params?: PaginationParams & { category?: string; isPublished?: string; search?: string }): Promise<{ articles: Article[]; total: number; page: number; limit: number; pagination: { currentPage: number; totalPages: number; totalArticles: number; hasMore: boolean } }> => {
     try {
-      const response = await api.get<{ articles: Article[]; total: number; page: number; limit: number; pagination: { currentPage: number; totalPages: number; totalArticles: number; hasMore: boolean } }>('/articles', params as Record<string, unknown>);
+      const response = await api.get<{ articles: Article[]; total: number; page: number; limit: number; pagination: { currentPage: number; totalPages: number; totalArticles: number; hasMore: boolean } }>('/admin/articles', params as Record<string, unknown>);
       return response;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+
+  /**
+   * Get single article by ID
+   */
+  getArticleById: async (id: string): Promise<Article> => {
+    try {
+      const response = await api.get<{ article: Article }>(`/admin/articles/${id}`);
+      return response.article;
     } catch (error) {
       throw handleApiError(error);
     }
@@ -149,9 +260,9 @@ export const adminService = {
   /**
    * Create new article
    */
-  createArticle: async (articleData: { title: string; content: string; category: string; excerpt?: string; tags?: string[] }): Promise<Article> => {
+  createArticle: async (articleData: { title: string; content: string; category: string; excerpt?: string; tags?: string[]; isPublished?: boolean }): Promise<Article> => {
     try {
-      const response = await api.post<{ article: Article }>('/articles', articleData);
+      const response = await api.post<{ article: Article }>('/admin/articles', articleData);
       return response.article;
     } catch (error) {
       throw handleApiError(error);
@@ -161,9 +272,9 @@ export const adminService = {
   /**
    * Update article
    */
-  updateArticle: async (id: string, articleData: Partial<{ title: string; content: string; category: string; excerpt?: string; tags?: string[] }>): Promise<Article> => {
+  updateArticle: async (id: string, articleData: Partial<{ title: string; content: string; category: string; excerpt?: string; tags?: string[]; isPublished?: boolean }>): Promise<Article> => {
     try {
-      const response = await api.put<{ article: Article }>(`/articles/${id}`, articleData);
+      const response = await api.put<{ article: Article }>(`/admin/articles/${id}`, articleData);
       return response.article;
     } catch (error) {
       throw handleApiError(error);
@@ -175,7 +286,7 @@ export const adminService = {
    */
   deleteArticle: async (id: string): Promise<void> => {
     try {
-      await api.delete(`/articles/${id}`);
+      await api.delete(`/admin/articles/${id}`);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -186,7 +297,7 @@ export const adminService = {
    */
   toggleArticlePublish: async (id: string): Promise<Article> => {
     try {
-      const response = await api.patch<{ article: Article }>(`/articles/${id}/publish`, {});
+      const response = await api.patch<{ article: Article }>(`/admin/articles/${id}/publish`, {});
       return response.article;
     } catch (error) {
       throw handleApiError(error);

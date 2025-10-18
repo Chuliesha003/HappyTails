@@ -228,17 +228,24 @@ export interface VetCitiesResponse {
 // Appointment Types
 export interface Appointment {
   id: string;
-  userId: string;
-  vetId: string;
-  petId: string;
-  date: string;
-  time: string;
+  user: string | User;
+  vet: string | Vet;
+  pet: string | Pet;
+  dateTime: string;
+  duration?: number;
+  endTime?: string;
   reason: string;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  symptoms?: string;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no-show';
   notes?: string;
-  user?: User;
-  vet?: Vet;
-  pet?: Pet;
+  fee?: number;
+  isPaid?: boolean;
+  paymentMethod?: string;
+  cancellationReason?: string;
+  cancelledBy?: string;
+  cancelledAt?: string;
+  followUpRequired?: boolean;
+  followUpDate?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -246,9 +253,10 @@ export interface Appointment {
 export interface CreateAppointmentRequest {
   vetId: string;
   petId: string;
-  date: string;
-  time: string;
+  dateTime: string;
+  duration?: number;
   reason: string;
+  symptoms?: string;
   notes?: string;
 }
 
@@ -322,13 +330,20 @@ export interface Article {
   id: string;
   title: string;
   content: string;
-  category: 'nutrition' | 'training' | 'health' | 'general';
+  excerpt?: string;
+  category: 'nutrition' | 'training' | 'health' | 'general' | 'diseases' | 'grooming' | 'behavior';
   author?: string;
   authorName?: string;
   imageUrl?: string;
   images?: string[];
   tags?: string[];
-  published: boolean;
+  published?: boolean;  // legacy
+  isPublished?: boolean;
+  publishedAt?: string;
+  viewCount?: number;
+  likeCount?: number;
+  readTime?: number;
+  isFeatured?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -336,11 +351,13 @@ export interface Article {
 export interface CreateArticleRequest {
   title: string;
   content: string;
-  category: 'nutrition' | 'training' | 'health' | 'general';
+  excerpt?: string;
+  category: 'nutrition' | 'training' | 'health' | 'general' | 'diseases' | 'grooming' | 'behavior';
   author?: string;
   imageUrl?: string;
   tags?: string[];
   published?: boolean;
+  isPublished?: boolean;
 }
 
 // Admin Types

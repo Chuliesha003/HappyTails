@@ -359,7 +359,7 @@ exports.toggleUserBan = async (req, res) => {
 // Get all appointments (admin overview)
 exports.getAllAppointments = async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, vetId, userId, upcoming, past, sort = '-dateTime' } = req.query;
+    const { page = 1, limit = 20, status, vetId, userId, upcoming, past, sort = '-dateTime', search } = req.query;
 
     const query = {};
 
@@ -384,6 +384,41 @@ exports.getAllAppointments = async (req, res) => {
       query.dateTime = { $lt: new Date() };
     }
 
+    // Support free-text search by user/vet/pet names
+    if (search) {
+      const regex = new RegExp(search, 'i');
+
+      // Find matching users, vets, pets
+      const [matchingUsers, matchingVets, matchingPets] = await Promise.all([
+        User.find({ fullName: { $regex: regex } }).select('_id'),
+        Vet.find({ name: { $regex: regex } }).select('_id'),
+        Pet.find({ name: { $regex: regex } }).select('_id')
+      ]);
+
+      const userIds = matchingUsers.map(u => u._id);
+      const vetIds = matchingVets.map(v => v._id);
+      const petIds = matchingPets.map(p => p._id);
+
+      query.$or = [];
+      if (userIds.length) query.$or.push({ user: { $in: userIds } });
+      if (vetIds.length) query.$or.push({ vet: { $in: vetIds } });
+      if (petIds.length) query.$or.push({ pet: { $in: petIds } });
+
+      // If no matches found, return empty result quickly
+      if (query.$or.length === 0) {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            currentPage: parseInt(page),
+            totalPages: 0,
+            totalAppointments: 0,
+            hasMore: false,
+          },
+        });
+      }
+    }
+
     const appointments = await Appointment.find(query)
       .populate('user', 'fullName email phoneNumber')
       .populate('vet', 'name clinicName phoneNumber')
@@ -391,12 +426,14 @@ exports.getAllAppointments = async (req, res) => {
       .sort(sort)
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
+    // Convert to safe objects (map _id -> id and include computed fields)
+    const safeAppointments = appointments.map((a) => (typeof a.toSafeObject === 'function' ? a.toSafeObject() : a));
 
     const total = await Appointment.countDocuments(query);
 
     res.status(200).json({
       success: true,
-      data: appointments,
+  data: safeAppointments,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -450,8 +487,10 @@ exports.getAllVetsAdmin = async (req, res) => {
     const vetsWithStats = await Promise.all(
       vets.map(async (vet) => {
         const appointmentCount = await Appointment.countDocuments({ vet: vet._id });
+        const vetObj = vet.toObject();
         return {
-          ...vet.toObject(),
+          ...vetObj,
+          id: vetObj._id.toString(), // Add id field for frontend
           appointmentCount,
         };
       })
@@ -477,6 +516,154 @@ exports.getAllVetsAdmin = async (req, res) => {
   }
 };
 
+// Get single vet by ID
+exports.getVetById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const vet = await Vet.findById(id);
+
+    if (!vet) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vet not found',
+      });
+    }
+
+    // Get appointment count
+    const appointmentCount = await Appointment.countDocuments({ vet: vet._id });
+
+    const vetObj = vet.toObject();
+    res.status(200).json({
+      success: true,
+      data: {
+        ...vetObj,
+        id: vetObj._id.toString(), // Add id field for frontend
+        appointmentCount,
+      },
+    });
+  } catch (error) {
+    console.error('Get vet by ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch vet',
+      error: error.message,
+    });
+  }
+};
+
+// Create new vet
+exports.createVet = async (req, res) => {
+  try {
+    const vetData = req.body;
+
+    // Check if vet with email already exists
+    const existingVet = await Vet.findOne({ email: vetData.email });
+    if (existingVet) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vet with this email already exists',
+      });
+    }
+
+    const vet = new Vet(vetData);
+    await vet.save();
+
+    const vetObj = vet.toObject();
+    res.status(201).json({
+      success: true,
+      message: 'Vet created successfully',
+      data: {
+        ...vetObj,
+        id: vetObj._id.toString(), // Add id field for frontend
+      },
+    });
+  } catch (error) {
+    console.error('Create vet error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create vet',
+      error: error.message,
+    });
+  }
+};
+
+// Update vet
+exports.updateVet = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    const vet = await Vet.findByIdAndUpdate(
+      id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    );
+
+    if (!vet) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vet not found',
+      });
+    }
+
+    const vetObj = vet.toObject();
+    res.status(200).json({
+      success: true,
+      message: 'Vet updated successfully',
+      data: {
+        ...vetObj,
+        id: vetObj._id.toString(), // Add id field for frontend
+      },
+    });
+  } catch (error) {
+    console.error('Update vet error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update vet',
+      error: error.message,
+    });
+  }
+};
+
+// Delete vet
+exports.deleteVet = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if vet has appointments
+    const appointmentCount = await Appointment.countDocuments({ vet: id });
+    
+    if (appointmentCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete vet. There are ${appointmentCount} appointments associated with this vet. Please reassign or cancel them first.`,
+      });
+    }
+
+    const vet = await Vet.findByIdAndDelete(id);
+
+    if (!vet) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vet not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Vet deleted successfully',
+    });
+  } catch (error) {
+    console.error('Delete vet error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete vet',
+      error: error.message,
+    });
+  }
+};
+
 // Toggle vet verification status
 exports.toggleVetVerification = async (req, res) => {
   try {
@@ -494,16 +681,56 @@ exports.toggleVetVerification = async (req, res) => {
     vet.isVerified = !vet.isVerified;
     await vet.save();
 
+    const vetObj = vet.toObject();
     res.status(200).json({
       success: true,
       message: `Vet ${vet.isVerified ? 'verified' : 'unverified'} successfully`,
-      data: vet,
+      data: {
+        ...vetObj,
+        id: vetObj._id.toString(), // Add id field for frontend
+      },
     });
   } catch (error) {
     console.error('Toggle vet verification error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to toggle vet verification',
+      error: error.message,
+    });
+  }
+};
+
+// Toggle vet active status
+exports.toggleVetStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const vet = await Vet.findById(id);
+
+    if (!vet) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vet not found',
+      });
+    }
+
+    vet.isActive = !vet.isActive;
+    await vet.save();
+
+    const vetObj = vet.toObject();
+    res.status(200).json({
+      success: true,
+      message: `Vet ${vet.isActive ? 'activated' : 'deactivated'} successfully`,
+      data: {
+        ...vetObj,
+        id: vetObj._id.toString(), // Add id field for frontend
+      },
+    });
+  } catch (error) {
+    console.error('Toggle vet status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to toggle vet status',
       error: error.message,
     });
   }
@@ -884,6 +1111,246 @@ exports.togglePetStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to toggle pet status',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Article Management (Admin)
+ */
+
+// Get all articles (admin view with all filters)
+exports.getAllArticlesAdmin = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, category, isPublished, search, sort = '-createdAt' } = req.query;
+
+    const query = {};
+
+    // Apply filters
+    if (category) {
+      query.category = category;
+    }
+
+    if (isPublished !== undefined) {
+      query.isPublished = isPublished === 'true';
+    }
+
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } },
+        { tags: { $in: [new RegExp(search, 'i')] } },
+      ];
+    }
+
+    const articles = await Article.find(query)
+      .populate('author', 'fullName email')
+      .sort(sort)
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
+    const total = await Article.countDocuments(query);
+
+    const articlesWithId = articles.map((article) => {
+      const articleObj = article.toObject();
+      return {
+        ...articleObj,
+        id: articleObj._id.toString(),
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      articles: articlesWithId,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalArticles: total,
+        hasMore: page * limit < total,
+      },
+    });
+  } catch (error) {
+    console.error('Get all articles admin error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch articles',
+      error: error.message,
+    });
+  }
+};
+
+// Get single article by ID
+exports.getArticleById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const article = await Article.findById(id).populate('author', 'fullName email');
+
+    if (!article) {
+      return res.status(404).json({
+        success: false,
+        message: 'Article not found',
+      });
+    }
+
+    const articleObj = article.toObject();
+    res.status(200).json({
+      success: true,
+      article: {
+        ...articleObj,
+        id: articleObj._id.toString(),
+      },
+    });
+  } catch (error) {
+    console.error('Get article by ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch article',
+      error: error.message,
+    });
+  }
+};
+
+// Create new article
+exports.createArticle = async (req, res) => {
+  try {
+    const articleData = req.body;
+
+    // Set author from authenticated user
+    if (req.userDoc && req.userDoc._id) {
+      articleData.author = req.userDoc._id;
+      articleData.authorName = req.userDoc.fullName;
+    }
+
+    const article = new Article(articleData);
+    await article.save();
+
+    const articleObj = article.toObject();
+    res.status(201).json({
+      success: true,
+      message: 'Article created successfully',
+      article: {
+        ...articleObj,
+        id: articleObj._id.toString(),
+      },
+    });
+  } catch (error) {
+    console.error('Create article error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create article',
+      error: error.message,
+    });
+  }
+};
+
+// Update article
+exports.updateArticle = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    const article = await Article.findByIdAndUpdate(
+      id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).populate('author', 'fullName email');
+
+    if (!article) {
+      return res.status(404).json({
+        success: false,
+        message: 'Article not found',
+      });
+    }
+
+    const articleObj = article.toObject();
+    res.status(200).json({
+      success: true,
+      message: 'Article updated successfully',
+      article: {
+        ...articleObj,
+        id: articleObj._id.toString(),
+      },
+    });
+  } catch (error) {
+    console.error('Update article error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update article',
+      error: error.message,
+    });
+  }
+};
+
+// Delete article
+exports.deleteArticle = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const article = await Article.findByIdAndDelete(id);
+
+    if (!article) {
+      return res.status(404).json({
+        success: false,
+        message: 'Article not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Article deleted successfully',
+    });
+  } catch (error) {
+    console.error('Delete article error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete article',
+      error: error.message,
+    });
+  }
+};
+
+// Toggle article publish status
+exports.toggleArticlePublish = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const article = await Article.findById(id);
+
+    if (!article) {
+      return res.status(404).json({
+        success: false,
+        message: 'Article not found',
+      });
+    }
+
+    article.isPublished = !article.isPublished;
+    
+    // Set publishedAt timestamp when publishing for the first time
+    if (article.isPublished && !article.publishedAt) {
+      article.publishedAt = new Date();
+    }
+    
+    await article.save();
+
+    const articleObj = article.toObject();
+    res.status(200).json({
+      success: true,
+      message: `Article ${article.isPublished ? 'published' : 'unpublished'} successfully`,
+      article: {
+        ...articleObj,
+        id: articleObj._id.toString(),
+      },
+    });
+  } catch (error) {
+    console.error('Toggle article publish error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to toggle article publish status',
       error: error.message,
     });
   }

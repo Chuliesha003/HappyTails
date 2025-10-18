@@ -55,8 +55,23 @@ router.get('/appointments', adminController.getAllAppointments);
 // Get all vets (admin view with stats)
 router.get('/vets', adminController.getAllVetsAdmin);
 
+// Get single vet details
+router.get('/vets/:id', adminController.getVetById);
+
+// Create new vet
+router.post('/vets', adminController.createVet);
+
+// Update vet
+router.put('/vets/:id', adminController.updateVet);
+
+// Delete vet
+router.delete('/vets/:id', adminController.deleteVet);
+
 // Toggle vet verification status
 router.patch('/vets/:id/verify', adminController.toggleVetVerification);
+
+// Toggle vet active status
+router.patch('/vets/:id/status', adminController.toggleVetStatus);
 
 /**
  * Pet Management
@@ -79,5 +94,27 @@ router.delete('/pets/:id', adminController.deletePet);
 
 // Toggle pet active status
 router.patch('/pets/:id/status', adminController.togglePetStatus);
+
+/**
+ * Article Management
+ */
+
+// Get all articles (admin view)
+router.get('/articles', adminController.getAllArticlesAdmin);
+
+// Get single article details
+router.get('/articles/:id', adminController.getArticleById);
+
+// Create new article
+router.post('/articles', adminController.createArticle);
+
+// Update article
+router.put('/articles/:id', adminController.updateArticle);
+
+// Delete article
+router.delete('/articles/:id', adminController.deleteArticle);
+
+// Toggle article publish status
+router.patch('/articles/:id/publish', adminController.toggleArticlePublish);
 
 module.exports = router;
