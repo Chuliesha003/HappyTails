@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Star, MapPin, Phone, Clock, Navigation, Search, AlertCircle, CheckCircle } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { vetsService } from "@/services/vets";
 import type { Vet } from "@/types/api";
@@ -26,6 +26,7 @@ const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: numbe
 
 const Vets = () => {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const q = params.get("q") || "";
   const [selected, setSelected] = useState<Vet | null>(null);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number, address?: string} | null>(null);
@@ -35,111 +36,43 @@ const Vets = () => {
   const [isLoadingVets, setIsLoadingVets] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get user's current location and fetch nearby vets automatically
+  // Get user's location and fetch vets from backend
   useEffect(() => {
+    // Try to get user's location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        async (position) => {
+        (position) => {
           const location = {
             lat: position.coords.latitude,
             lng: position.coords.longitude
           };
-          
           setUserLocation(location);
-          setIsLoadingVets(true);
-          setError(null);
-          
-          // 1) Reverse geocode (best-effort). This should never block vet loading.
-          let cityName: string | null = null;
-          try {
-            const addressResponse = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${location.lat}&longitude=${location.lng}&localityLanguage=en`);
-            const addressData = await addressResponse.json();
-            cityName = addressData.city || addressData.locality || addressData.principalSubdivision || null;
-            const address = cityName && addressData.countryName ? `${cityName}, ${addressData.countryName}` : (addressData.city || 'Location detected');
-            setUserLocation(prev => ({ ...prev!, address }));
-            toast({ title: "📍 Location detected", description: `Found you at ${address}. Searching for vets...` });
-          } catch (geoErr) {
-            console.warn('Reverse geocoding failed; proceeding with nearby search', geoErr);
-            setUserLocation(prev => ({ ...prev!, address: 'Location detected' }));
-          }
-
-          // 2) Load vets (always runs, independent of reverse geocode success)
-          try {
-            let vetsList: Vet[] = [];
-            if (cityName) {
-              try {
-                vetsList = await vetsService.getAllVets({ city: cityName });
-              } catch (err) {
-                console.warn('City-based vet lookup failed, falling back to nearby search', err);
-                vetsList = [];
-              }
-
-              if (!vetsList || vetsList.length === 0) {
-                vetsList = await vetsService.searchNearbyVets(location.lat, location.lng, 50);
-                if (!vetsList || vetsList.length === 0) {
-                  vetsList = await vetsService.searchNearbyVets(location.lat, location.lng, 75);
-                }
-                if (!vetsList || vetsList.length === 0) {
-                  vetsList = await vetsService.getAllVets();
-                }
-              }
-            } else {
-              vetsList = await vetsService.searchNearbyVets(location.lat, location.lng, 50);
-              if (!vetsList || vetsList.length === 0) {
-                vetsList = await vetsService.searchNearbyVets(location.lat, location.lng, 75);
-              }
-              if (!vetsList || vetsList.length === 0) {
-                vetsList = await vetsService.getAllVets();
-              }
-            }
-
-            setVets(vetsList);
-            toast({ title: "🏥 Vets found", description: `Found ${vetsList.length} veterinarian${vetsList.length !== 1 ? 's' : ''} near you` });
-          } catch (error) {
-            console.error('Error fetching vets:', error);
-            setError('Failed to fetch veterinarians. Please try again.');
-            toast({ title: "Error", description: "Failed to fetch veterinarians. Please try again.", variant: "destructive" });
-          } finally {
-            setIsLoadingVets(false);
-          }
+          console.log('User location detected:', location);
         },
-        async (error) => {
-          console.error("Location error:", error);
-          setLocationError("Unable to access your location. Showing all available vets.");
-          
-          // Default to fetching all vets without location
-          setIsLoadingVets(true);
-          
-          try {
-            const vetsList = await vetsService.getAllVets();
-            setVets(vetsList);
-            
-            toast({
-              title: "Location access denied",
-              description: "Showing all available veterinarians",
-              variant: "destructive"
-            });
-          } catch (error) {
-            console.error('Error fetching vets:', error);
-            setError('Failed to fetch veterinarians. Please try again.');
-          } finally {
-            setIsLoadingVets(false);
-          }
+        (error) => {
+          console.warn('Location access denied:', error);
+          setLocationError('Unable to access your location. Showing all available vets.');
         }
       );
     } else {
-      setLocationError("Geolocation not supported");
-      setIsLoadingVets(true);
-      
-      // Fetch all vets if geolocation not supported
-      vetsService.getAllVets()
-        .then(setVets)
-        .catch((err) => {
-          console.error('Error fetching vets:', err);
-          setError('Failed to fetch veterinarians. Please try again.');
-        })
-        .finally(() => setIsLoadingVets(false));
+      setLocationError('Geolocation not supported by your browser.');
     }
+
+    // Fetch all vets from backend
+    setIsLoadingVets(true);
+    setError(null);
+
+    vetsService.getAllVets()
+      .then((list) => {
+        setVets(list || []);
+        toast({ title: '🏥 Vets loaded', description: `Loaded ${list.length} veterinarians` });
+      })
+      .catch((err) => {
+        console.error('Failed to load vets:', err);
+        setError('Failed to load veterinarians.');
+        toast({ title: 'Error', description: 'Failed to load veterinarians. Please try again.', variant: 'destructive' });
+      })
+      .finally(() => setIsLoadingVets(false));
   }, []);
 
   const filtered = useMemo(() => {
@@ -164,8 +97,8 @@ const Vets = () => {
     // Create booking URL with vet information
     const bookingUrl = `/book-appointment?vetId=${vetId || 'unknown'}&vetName=${encodeURIComponent(vetName || 'Veterinary Clinic')}`;
     
-    // Redirect to booking page
-    window.location.href = bookingUrl;
+    // Navigate using React Router to respect authentication guards
+    navigate(bookingUrl);
   };
 
   return (
