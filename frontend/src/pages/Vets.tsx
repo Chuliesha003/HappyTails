@@ -1,234 +1,409 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { GoogleMap, MarkerF, InfoWindowF, useJsApiLoader } from "@react-google-maps/api";
-import { api } from "@/lib/api";
+import { Helmet } from "react-helmet-async";
+import { useMemo, useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Star, MapPin, Phone, Clock, Navigation, Search, AlertCircle, CheckCircle } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
+import { vetsService } from "@/services/vets";
+import type { Vet } from "@/types/api";
+import VetGoogleMap from "@/components/VetGoogleMap";
 
-// Vets page component
-
-type Vet = {
-  id: string;
-  name: string;
-  clinicName?: string;
-  specialization?: string[];
-  yearsExperience?: number;
-  address?: string;
-  phoneNumber?: string;
-  location?: { type: "Point"; coordinates: [number, number] }; // [lng, lat]
+const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
 };
 
-const libs: ("places")[] = ["places"];
-const MAP_STYLE: React.CSSProperties = { width: "100%", height: "520px", borderRadius: 16 };
-
-const redDot =
-  "https://maps.gstatic.com/mapfiles/ms2/micons/red-dot.png"; // simple red marker icon
-
-export default function Vets() {
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY!,
-    libraries: libs,
-  });
-
-  const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
+const Vets = () => {
+  const [params] = useSearchParams();
+  const q = params.get("q") || "";
+  const [selected, setSelected] = useState<Vet | null>(null);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number, address?: string} | null>(null);
+  const [searchTerm, setSearchTerm] = useState(q);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [vets, setVets] = useState<Vet[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [locError, setLocError] = useState<string | null>(null);
+  const [isLoadingVets, setIsLoadingVets] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const mapRef = useRef<google.maps.Map | null>(null);
-
-  const mapOptions = useMemo<google.maps.MapOptions>(() => ({
-    clickableIcons: false,
-    mapTypeControl: false,
-    streetViewControl: false,
-    fullscreenControl: false,
-    gestureHandling: "greedy",
-  }), []);
-
-  const fit = (c: { lat: number; lng: number }, list: Vet[]) => {
-    if (!mapRef.current) return;
-    const bounds = new google.maps.LatLngBounds();
-    bounds.extend(c);
-    list.forEach(v => {
-      const coords = v.location?.coordinates;
-      if (coords && coords.length === 2) {
-        bounds.extend(new google.maps.LatLng(coords[1], coords[0]));
-      }
-    });
-    mapRef.current.fitBounds(bounds, 64);
-  };
-
-  const fetchVets = async (lat: number, lng: number) => {
-    setLoading(true);
-    try {
-      const data = await api.get<Vet[]>("/api/vets/nearby", {
-        params: { latitude: lat, longitude: lng, maxDistance: 25 },
-      });
-      setVets(data || []);
-      setTimeout(() => fit({ lat, lng }, data || []), 0);
-    } catch (e: unknown) {
-      console.error("Failed to load vets", e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const useMyLocation = () => {
-    setLocError(null);
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const c = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setCenter(c);
-        fetchVets(c.lat, c.lng);
-      },
-      err => setLocError(err.message || "Unable to get your location"),
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  };
-
-  // Optional: initial fallback (city center) if user hasn'"'"'t clicked the button yet
+  // Get user's current location and fetch nearby vets automatically
   useEffect(() => {
-    if (!center) {
-      const fallback = { lat: 6.9271, lng: 79.8612 }; // Colombo
-      setCenter(fallback);
-      // don'"'"'t fetch until user allows location (UX choice)
-    }
-  }, [center]);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          
+          setUserLocation(location);
+          setIsLoadingVets(true);
+          setError(null);
+          
+          // 1) Reverse geocode (best-effort). This should never block vet loading.
+          let cityName: string | null = null;
+          try {
+            const addressResponse = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${location.lat}&longitude=${location.lng}&localityLanguage=en`);
+            const addressData = await addressResponse.json();
+            cityName = addressData.city || addressData.locality || addressData.principalSubdivision || null;
+            const address = cityName && addressData.countryName ? `${cityName}, ${addressData.countryName}` : (addressData.city || 'Location detected');
+            setUserLocation(prev => ({ ...prev!, address }));
+            toast({ title: "📍 Location detected", description: `Found you at ${address}. Searching for vets...` });
+          } catch (geoErr) {
+            console.warn('Reverse geocoding failed; proceeding with nearby search', geoErr);
+            setUserLocation(prev => ({ ...prev!, address: 'Location detected' }));
+          }
 
-  const onMapLoad = (m: google.maps.Map) => (mapRef.current = m);
+          // 2) Load vets (always runs, independent of reverse geocode success)
+          try {
+            let vetsList: Vet[] = [];
+            if (cityName) {
+              try {
+                vetsList = await vetsService.getAllVets({ city: cityName });
+              } catch (err) {
+                console.warn('City-based vet lookup failed, falling back to nearby search', err);
+                vetsList = [];
+              }
 
-  const handleListClick = (v: Vet) => {
-    setActiveId(v.id);
-    const coords = v.location?.coordinates;
-    if (coords && mapRef.current) {
-      const latLng = { lat: coords[1], lng: coords[0] };
-      mapRef.current.panTo(latLng);
-      mapRef.current.setZoom(Math.max(mapRef.current.getZoom() || 14, 15));
+              if (!vetsList || vetsList.length === 0) {
+                vetsList = await vetsService.searchNearbyVets(location.lat, location.lng, 50);
+                if (!vetsList || vetsList.length === 0) {
+                  vetsList = await vetsService.searchNearbyVets(location.lat, location.lng, 75);
+                }
+                if (!vetsList || vetsList.length === 0) {
+                  vetsList = await vetsService.getAllVets();
+                }
+              }
+            } else {
+              vetsList = await vetsService.searchNearbyVets(location.lat, location.lng, 50);
+              if (!vetsList || vetsList.length === 0) {
+                vetsList = await vetsService.searchNearbyVets(location.lat, location.lng, 75);
+              }
+              if (!vetsList || vetsList.length === 0) {
+                vetsList = await vetsService.getAllVets();
+              }
+            }
+
+            setVets(vetsList);
+            toast({ title: "🏥 Vets found", description: `Found ${vetsList.length} veterinarian${vetsList.length !== 1 ? 's' : ''} near you` });
+          } catch (error) {
+            console.error('Error fetching vets:', error);
+            setError('Failed to fetch veterinarians. Please try again.');
+            toast({ title: "Error", description: "Failed to fetch veterinarians. Please try again.", variant: "destructive" });
+          } finally {
+            setIsLoadingVets(false);
+          }
+        },
+        async (error) => {
+          console.error("Location error:", error);
+          setLocationError("Unable to access your location. Showing all available vets.");
+          
+          // Default to fetching all vets without location
+          setIsLoadingVets(true);
+          
+          try {
+            const vetsList = await vetsService.getAllVets();
+            setVets(vetsList);
+            
+            toast({
+              title: "Location access denied",
+              description: "Showing all available veterinarians",
+              variant: "destructive"
+            });
+          } catch (error) {
+            console.error('Error fetching vets:', error);
+            setError('Failed to fetch veterinarians. Please try again.');
+          } finally {
+            setIsLoadingVets(false);
+          }
+        }
+      );
+    } else {
+      setLocationError("Geolocation not supported");
+      setIsLoadingVets(true);
+      
+      // Fetch all vets if geolocation not supported
+      vetsService.getAllVets()
+        .then(setVets)
+        .catch((err) => {
+          console.error('Error fetching vets:', err);
+          setError('Failed to fetch veterinarians. Please try again.');
+        })
+        .finally(() => setIsLoadingVets(false));
     }
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!searchTerm) return vets;
+    const term = searchTerm.toLowerCase();
+    return vets.filter(vet => {
+      const address = (vet.location?.address || vet.address || '').toLowerCase();
+      const city = (vet.location?.city || vet.city || '').toLowerCase();
+      const spec = Array.isArray(vet.specialization)
+        ? vet.specialization.join(' ').toLowerCase()
+        : (vet.specialization || '').toLowerCase();
+      return (
+        vet.name.toLowerCase().includes(term) ||
+        address.includes(term) ||
+        city.includes(term) ||
+        spec.includes(term)
+      );
+    });
+  }, [vets, searchTerm]);
+
+  const onBook = (vetId?: string, vetName?: string) => { 
+    // Create booking URL with vet information
+    const bookingUrl = `/book-appointment?vetId=${vetId || 'unknown'}&vetName=${encodeURIComponent(vetName || 'Veterinary Clinic')}`;
+    
+    // Redirect to booking page
+    window.location.href = bookingUrl;
   };
-
-  if (loadError) return <div className="p-4 text-red-600">Maps failed to load.</div>;
-  if (!isLoaded) return <div className="p-4">Loading map</div>;
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[1fr_520px] gap-6">
-      {/* LEFT: Map + controls */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <button
-            className="px-4 py-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition"
-            onClick={useMyLocation}
-          >
-             Use my current location
-          </button>
-          {loading && <span className="text-sm text-gray-500">Loading nearby vets</span>}
-          {locError && <span className="text-sm text-red-600">{locError}</span>}
-        </div>
+    <>
+      <Helmet>
+        <title>Find & Book Vets - HappyTails</title>
+        <meta name="description" content="Find and book appointments with trusted veterinarians near you" />
+      </Helmet>
+      
+      <div className="min-h-screen bg-white">
+        <div className="container mx-auto px-4 py-6 max-w-7xl">
 
-        <GoogleMap
-          onLoad={onMapLoad}
-          center={center!}
-          zoom={12}
-          mapContainerStyle={MAP_STYLE}
-          options={mapOptions}
-        >
-          {/* user marker */}
-          {center && (
-            <MarkerF
-              position={center}
-              title="You are here"
-              icon={{
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 8,
-                fillColor: "#3b82f6",
-                fillOpacity: 1,
-                strokeColor: "#ffffff",
-                strokeWeight: 2,
-              }}
-              zIndex={1000}
-            />
+          {/* Location Error Banner */}
+          {locationError && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+              <div className="flex">
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700">{locationError}</p>
+                </div>
+              </div>
+            </div>
           )}
 
-          {/* vet markers */}
-          {vets.map((v) => {
-            const coords = v.location?.coordinates;
-            if (!coords) return null;
-            const pos = { lat: coords[1], lng: coords[0] };
-            const isActive = activeId === v.id;
-            return (
-              <MarkerF
-                key={v.id}
-                position={pos}
-                onClick={() => setActiveId(v.id)}
-                icon={redDot}
-                title={v.name}
-                zIndex={isActive ? 999 : 1}
-              >
-                {isActive && (
-                  <InfoWindowF onCloseClick={() => setActiveId(null)}>
-                    <div style={{ maxWidth: 240 }}>
-                      <div style={{ fontWeight: 700 }}>{v.name}</div>
-                      {v.clinicName && <div>{v.clinicName}</div>}
-                      {v.specialization?.length ? (
-                        <div style={{ fontSize: 12, color: "#6b7280" }}>
-                          {v.specialization.join(", ")}
-                        </div>
-                      ) : null}
-                      {v.address && <div style={{ marginTop: 6 }}>{v.address}</div>}
-                      {v.phoneNumber && (
-                        <a
-                          href={`tel:${v.phoneNumber}`}
-                          style={{ color: "#ef4444", fontWeight: 600, display: "inline-block", marginTop: 6 }}
-                        >
-                          {v.phoneNumber}
-                        </a>
-                      )}
-                    </div>
-                  </InfoWindowF>
+          {/* 50/50 responsive split: stack on small screens */}
+          <div className="flex flex-col lg:flex-row gap-6 min-h-[620px]">
+            
+            {/* Left Side - Map Section */}
+            <div className="order-1 lg:order-none lg:w-1/2 min-w-0 lg:sticky lg:top-24 self-start">
+              <Card className="h-full shadow-sm border border-purple-100">
+                <CardContent className="p-0">
+                  <div className="relative w-full overflow-hidden rounded-xl h-[620px]">
+                    <VetGoogleMap 
+                      vets={filtered}
+                      userLocation={userLocation || undefined}
+                      onVetClick={(vet) => setSelected(vet)}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Side - Clinic List Section */}
+            <div className="order-2 lg:order-none lg:w-1/2 min-w-0">
+              <div className="space-y-4 lg:max-h-[620px] lg:overflow-y-auto pr-1">
+                {/* Error Message */}
+                {error && !isLoadingVets && (
+                  <Card className="border-destructive">
+                    <CardContent className="pt-6 pb-6">
+                      <div className="flex items-center gap-2 text-destructive">
+                        <AlertCircle className="h-5 w-5" />
+                        <p>{error}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
-              </MarkerF>
+
+                {isLoadingVets ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <Card key={i}>
+                        <CardContent className="p-4 space-y-3">
+                          <Skeleton className="h-6 w-3/4" />
+                          <Skeleton className="h-4 w-1/2" />
+                          <Skeleton className="h-4 w-2/3" />
+                          <Skeleton className="h-10 w-full" />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : filtered.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-8 text-center">
+                      <div className="text-4xl mb-4">🏥</div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No veterinarians found</h3>
+                      <p className="text-gray-600">Try adjusting your search or check your location.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  filtered.map((vet) => {
+                    const address = vet.location?.address || vet.address || '';
+                    const city = vet.location?.city || vet.city || '';
+                    const state = vet.location?.state || vet.state || '';
+                    const zipCode = vet.location?.zipCode || vet.zipCode || '';
+                    const specialization = Array.isArray(vet.specialization)
+                      ? vet.specialization.join(', ')
+                      : vet.specialization || '';
+                    const experience = vet.yearsOfExperience ?? vet.experience;
+                    const verified = vet.isVerified ?? vet.verified;
+                    
+                    return (
+                      <Card 
+                        key={vet.id} 
+                        className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:border-pink-300 shadow-sm border border-pink-100 rounded-lg bg-white"
+                        onClick={() => setSelected(vet)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="mb-3">
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-lg font-bold text-gray-900">{vet.name}</h3>
+                              {verified && (
+                                <Badge className="bg-green-100 text-green-700 hover:bg-green-200">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Verified
+                                </Badge>
+                              )}
+                            </div>
+                            {specialization && (
+                              <p className="text-sm text-gray-600 mt-1">{specialization}</p>
+                            )}
+                            {experience && (
+                              <p className="text-xs text-gray-500 mt-1">{experience} years experience</p>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-2 mb-3">
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <MapPin className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                              <span className="text-sm">{address}, {city}{state ? `, ${state}` : ''} {zipCode}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <Phone className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                              <span className="text-sm">{vet.phoneNumber}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end">
+                            <Button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onBook(vet.id, vet.name);
+                              }}
+                              className="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-full font-medium shadow-md transition-all duration-200 hover:shadow-lg text-sm"
+                            >
+                              Book Appointment
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+          </div>
+
+          {/* Selected Vet Modal */}
+          {selected && (() => {
+            const address = selected.address || '';
+            const city = selected.city || '';
+            const state = selected.state || '';
+            const zipCode = selected.zipCode || '';
+            const specialization = Array.isArray(selected.specialization) 
+              ? selected.specialization.join(', ') 
+              : selected.specialization || '';
+            const experience = selected.experience;
+            const verified = selected.verified;
+            
+            return (
+              <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      {selected.name}
+                      {verified && (
+                        <Badge className="bg-green-100 text-green-700">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Verified
+                        </Badge>
+                      )}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4">
+                    {specialization && (
+                      <div>
+                        <h4 className="font-semibold text-sm text-gray-700 mb-1">Specialization</h4>
+                        <p className="text-sm text-gray-600">{specialization}</p>
+                      </div>
+                    )}
+                    
+                    {experience && (
+                      <div>
+                        <h4 className="font-semibold text-sm text-gray-700 mb-1">Experience</h4>
+                        <p className="text-sm text-gray-600">{experience} years</p>
+                      </div>
+                    )}
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2 text-sm text-gray-600">
+                        <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <span>{address}, {city}{state ? `, ${state}` : ''} {zipCode}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Phone className="h-4 w-4 flex-shrink-0" />
+                        <span>{selected.phoneNumber}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2">
+                      <Button 
+                        size="sm" 
+                        onClick={() => window.open(`tel:${selected.phoneNumber}`, '_self')}
+                        className="bg-green-500 hover:bg-green-600 text-white"
+                      >
+                        <Phone className="w-4 h-4 mr-2" />
+                        Call Now
+                      </Button>
+                      {selected.location && selected.location.coordinates && (
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const [lng, lat] = selected.location!.coordinates;
+                            const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+                            window.open(url, '_blank');
+                          }}
+                        >
+                          <Navigation className="w-4 h-4 mr-2" />
+                          Get Directions
+                        </Button>
+                      )}
+                      <Button 
+                        size="sm"
+                        onClick={() => onBook(selected.id, selected.name)}
+                        className="bg-purple-600 hover:bg-purple-700"
+                      >
+                        Book Appointment
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             );
-          })}
-        </GoogleMap>
+          })()}
+        </div>
       </div>
-
-      {/* RIGHT: List */}
-      <aside className="space-y-4 max-h-[520px] overflow-auto pr-1">
-        {vets.map((v) => (
-          <article
-            key={v.id}
-            onMouseEnter={() => setActiveId(v.id)}
-            onClick={() => handleListClick(v)}
-            className={`rounded-2xl border p-4 cursor-pointer transition ${
-              activeId === v.id ? "border-pink-500 shadow-md" : "border-gray-200 hover:shadow"
-            }`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-lg font-semibold">{v.name}</h3>
-              <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700">Verified</span>
-            </div>
-            {v.specialization?.length ? (
-              <div className="text-gray-600 text-sm mt-1">{v.specialization.join(", ")}</div>
-            ) : null}
-            {typeof v.yearsExperience === "number" && (
-              <div className="text-gray-500 text-xs mt-1">{v.yearsExperience} years experience</div>
-            )}
-            {v.address && (
-              <div className="mt-2 text-sm"> {v.address}</div>
-            )}
-            {v.phoneNumber && (
-              <div className="mt-1 text-sm"> {v.phoneNumber}</div>
-            )}
-            <div className="mt-3">
-              <button className="px-4 py-2 rounded-full bg-pink-500 text-white hover:bg-pink-600">
-                Book Appointment
-              </button>
-            </div>
-          </article>
-        ))}
-
-        {!loading && vets.length === 0 && (
-          <div className="text-sm text-gray-500">No vets found. Click "Use my current location".</div>
-        )}
-      </aside>
-    </div>
+    </>
   );
-}
+};
+
+export default Vets;

@@ -11,16 +11,26 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { appointmentsService } from "@/services/appointments";
 import { petsService } from "@/services/pets";
 import { useAuth } from "@/contexts/AuthContext";
+import AuthPrompt from "@/components/AuthPrompt";
 import type { Pet } from "@/types/api";
 
 const BookAppointment = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [pets, setPets] = useState<Pet[]>([]);
   const [isLoadingPets, setIsLoadingPets] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [appointmentDetails, setAppointmentDetails] = useState<{
+    vetName: string;
+    petName: string;
+    date: string;
+    time: string;
+    reason: string;
+    notes?: string;
+  } | null>(null);
   const [formData, setFormData] = useState({
     petId: "",
     appointmentDate: "",
@@ -32,7 +42,7 @@ const BookAppointment = () => {
   const vetId = searchParams.get("vetId");
   const vetName = searchParams.get("vetName") || "Veterinary Clinic";
 
-  // Load user's pets on mount
+  // Load user's pets when authenticated
   useEffect(() => {
     const loadPets = async () => {
       try {
@@ -56,8 +66,26 @@ const BookAppointment = () => {
       }
     };
 
-    loadPets();
-  }, []);
+    if (user) {
+      loadPets();
+    } else {
+      // If not authenticated, ensure loading state is reset
+      setIsLoadingPets(false);
+    }
+  }, [user]);
+
+  // Block unauthenticated users as a second guard (in addition to route HOC)
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPrompt currentPath="/book-appointment" />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,12 +100,13 @@ const BookAppointment = () => {
       return;
     }
 
-    if (!vetId) {
+    if (!vetId || vetId === 'unknown') {
       toast({
         title: "Invalid Vet",
-        description: "No veterinarian selected. Please select a vet first.",
+        description: "No veterinarian selected. Please go back and select a vet first.",
         variant: "destructive"
       });
+      setError("Invalid vet ID. Please select a veterinarian from the Find a Vet page.");
       return;
     }
 
@@ -85,24 +114,35 @@ const BookAppointment = () => {
       setIsSubmitting(true);
       setError(null);
 
+      const selectedPet = pets.find(p => p.id === formData.petId);
+
+      // Combine date and time into ISO datetime string
+      const dateTime = `${formData.appointmentDate}T${formData.appointmentTime || '09:00'}:00`;
+
       await appointmentsService.createAppointment({
         vetId,
         petId: formData.petId,
-        date: formData.appointmentDate,
-        time: formData.appointmentTime || '09:00',
+        dateTime,
         reason: formData.reason,
         notes: formData.notes || undefined
       });
 
-      toast({
-        title: "Appointment Booked!",
-        description: `Your appointment at ${vetName} has been scheduled successfully. You will receive a confirmation email shortly.`
+      // Store appointment details for confirmation display
+      setAppointmentDetails({
+        vetName,
+        petName: selectedPet?.name || 'Your pet',
+        date: formData.appointmentDate,
+        time: formData.appointmentTime || '09:00',
+        reason: formData.reason,
+        notes: formData.notes
       });
 
-      // Redirect to user dashboard
-      setTimeout(() => {
-        navigate("/user-dashboard");
-      }, 1500);
+      setBookingSuccess(true);
+
+      toast({
+        title: "Appointment Booked!",
+        description: `Your appointment at ${vetName} has been scheduled successfully.`
+      });
     } catch (err) {
       console.error('Failed to book appointment:', err);
       setError('Failed to book appointment. Please try again.');
@@ -147,17 +187,113 @@ const BookAppointment = () => {
             <CardHeader style={{ background: 'linear-gradient(135deg, hsl(327 100% 47%), hsl(297 64% 28%))', color: 'white' }}>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                Appointment Details
+                {bookingSuccess ? 'Appointment Confirmed' : 'Appointment Details'}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              {/* Error Message */}
-              {error && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-center gap-2 text-red-700">
-                  <AlertCircle className="h-5 w-5" />
-                  <p>{error}</p>
+              {/* Success Confirmation */}
+              {bookingSuccess && appointmentDetails ? (
+                <div className="space-y-6">
+                  {/* Success Icon */}
+                  <div className="text-center py-4">
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+                      <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Appointment Successfully Booked!</h2>
+                    <p className="text-gray-600">Your appointment has been scheduled and saved.</p>
+                  </div>
+
+                  {/* Appointment Summary */}
+                  <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-lg p-6 space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-pink-600" />
+                      Appointment Summary
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-white rounded-md p-4 shadow-sm">
+                        <p className="text-xs text-gray-500 mb-1">Veterinarian</p>
+                        <p className="font-semibold text-gray-900">{appointmentDetails.vetName}</p>
+                      </div>
+                      
+                      <div className="bg-white rounded-md p-4 shadow-sm">
+                        <p className="text-xs text-gray-500 mb-1">Pet</p>
+                        <p className="font-semibold text-gray-900">{appointmentDetails.petName}</p>
+                      </div>
+                      
+                      <div className="bg-white rounded-md p-4 shadow-sm">
+                        <p className="text-xs text-gray-500 mb-1">Date</p>
+                        <p className="font-semibold text-gray-900">
+                          {new Date(appointmentDetails.date).toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}
+                        </p>
+                      </div>
+                      
+                      <div className="bg-white rounded-md p-4 shadow-sm">
+                        <p className="text-xs text-gray-500 mb-1">Time</p>
+                        <p className="font-semibold text-gray-900">{appointmentDetails.time}</p>
+                      </div>
+                      
+                      <div className="bg-white rounded-md p-4 shadow-sm md:col-span-2">
+                        <p className="text-xs text-gray-500 mb-1">Reason for Visit</p>
+                        <p className="font-semibold text-gray-900">{appointmentDetails.reason}</p>
+                      </div>
+                      
+                      {appointmentDetails.notes && (
+                        <div className="bg-white rounded-md p-4 shadow-sm md:col-span-2">
+                          <p className="text-xs text-gray-500 mb-1">Additional Notes</p>
+                          <p className="text-gray-700">{appointmentDetails.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Next Steps */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5" />
+                      What's Next?
+                    </h4>
+                    <ul className="text-sm text-blue-800 space-y-1 ml-7">
+                      <li>• Your appointment has been saved to your account</li>
+                      <li>• You can view all your appointments in the User Dashboard</li>
+                      <li>• Please arrive 10 minutes early for your appointment</li>
+                      <li>• Bring your pet's medical records if available</li>
+                    </ul>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-4 pt-4">
+                    <Button
+                      onClick={() => navigate("/user-dashboard")}
+                      className="flex-1 bg-pink-500 hover:bg-pink-600 text-white"
+                    >
+                      Go to Dashboard
+                    </Button>
+                    <Button
+                      onClick={() => navigate("/vets")}
+                      variant="outline"
+                      className="flex-1 border-pink-300 text-pink-600 hover:bg-pink-50"
+                    >
+                      Book Another
+                    </Button>
+                  </div>
                 </div>
-              )}
+              ) : (
+                <>
+                  {/* Error Message */}
+                  {error && (
+                    <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-center gap-2 text-red-700">
+                      <AlertCircle className="h-5 w-5" />
+                      <p>{error}</p>
+                    </div>
+                  )}
 
               {/* Loading State */}
               {isLoadingPets ? (
@@ -314,6 +450,8 @@ const BookAppointment = () => {
                   </div>
                 </form>
               )}
+              </>
+            )}
             </CardContent>
           </Card>
         </div>
