@@ -69,6 +69,29 @@ export const appointmentsService = {
   },
 
   /**
+   * Update an appointment (owner or admin)
+   */
+  updateAppointment: async (id: string, data: Partial<Appointment>): Promise<Appointment> => {
+    try {
+      const response = await api.put<{ appointment: Appointment }>(`/appointments/${id}`, data);
+      return response.appointment;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+
+  /**
+   * Delete (cancel) an appointment by id
+   */
+  deleteAppointment: async (id: string): Promise<void> => {
+    try {
+      await api.delete(`/appointments/${id}`);
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+
+  /**
    * Get upcoming appointments
    */
   getUpcomingAppointments: async (): Promise<Appointment[]> => {
