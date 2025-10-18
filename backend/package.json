@@ -7,6 +7,8 @@
     "start": "node server.js",
     "dev": "node kill-port.js 5000 && nodemon server.js",
     "dev:force": "node kill-port.js 5000 && node server.js",
+  "seed:vets": "node -r dotenv/config scripts/seedVets.js",
+  "seed:vets:reset": "node -r dotenv/config scripts/seedVets.js --reset",
     "test": "jest --coverage --verbose",
     "test:watch": "jest --watch",
     "test:unit": "jest tests/unit --coverage",
