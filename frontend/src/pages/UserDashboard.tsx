@@ -27,7 +27,7 @@ import { useState, useEffect } from "react";
 import { petsService } from "@/services/pets";
 import { appointmentsService } from "@/services/appointments";
 import { toast } from "@/hooks/use-toast";
-import type { Pet, Appointment } from "@/types/api";
+import type { Pet, Appointment, Vet } from "@/types/api";
 
 const UserDashboard = () => {
   const [pets, setPets] = useState<Pet[]>([]);
@@ -79,6 +79,11 @@ const UserDashboard = () => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  };
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'confirmed':
@@ -89,15 +94,32 @@ const UserDashboard = () => {
         return 'bg-red-100 text-red-700';
       case 'completed':
         return 'bg-blue-100 text-blue-700';
+      case 'no-show':
+        return 'bg-gray-100 text-gray-700';
       default:
         return 'bg-gray-100 text-gray-700';
     }
   };
 
+  const getPetName = (pet: string | Pet | undefined): string => {
+    if (!pet) return 'Unknown Pet';
+    return typeof pet === 'string' ? pet : pet.name;
+  };
+
+  const getVetName = (vet: string | Vet | undefined): string => {
+    if (!vet) return 'Unknown Vet';
+    return typeof vet === 'string' ? vet : vet.name;
+  };
+
+  const getVetClinic = (vet: string | Vet | undefined): string | undefined => {
+    if (!vet || typeof vet === 'string') return undefined;
+    return vet.clinicName;
+  };
+
   const recentActivity = [
     ...appointments.slice(0, 2).map(appointment => ({
-      action: `Appointment scheduled for ${appointment.petId}`,
-      date: formatDate(appointment.date)
+      action: `Appointment scheduled for ${getPetName(appointment.pet)}`,
+      date: formatDate(appointment.dateTime)
     })),
     ...pets.slice(0, 1).map(pet => ({
       action: `${pet.name} profile updated`,
@@ -285,33 +307,66 @@ const UserDashboard = () => {
                   </div>
                 ) : (
                   appointments.map((appointment) => (
-                    <div key={appointment.id} className="p-4 border rounded-lg space-y-2">
+                    <div key={appointment.id} className="p-4 border rounded-lg space-y-3 hover:border-pink-300 transition-colors">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-semibold">{appointment.petId}</h3>
+                        <div>
+                          <h3 className="font-semibold text-lg">{getPetName(appointment.pet)}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            with Dr. {getVetName(appointment.vet)}
+                            {getVetClinic(appointment.vet) && ` at ${getVetClinic(appointment.vet)}`}
+                          </p>
+                        </div>
                         <Badge className={getStatusColor(appointment.status)}>
-                          {appointment.status}
+                          {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                         </Badge>
                       </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          <span>{formatDate(appointment.date)} at {appointment.time}</span>
+                      <div className="grid grid-cols-1 gap-3 text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Calendar className="h-4 w-4 text-blue-500" />
+                          <span className="font-medium">{formatDate(appointment.dateTime)}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Stethoscope className="h-4 w-4" />
-                          <span>Dr. {appointment.vetId}</span>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Clock className="h-4 w-4 text-green-500" />
+                          <span>{formatTime(appointment.dateTime)}</span>
+                          {appointment.duration && <span className="text-xs">({appointment.duration} min)</span>}
                         </div>
-                        <div className="flex items-center gap-2 col-span-2">
-                          <FileText className="h-4 w-4" />
-                          <span>{appointment.reason}</span>
+                        <div className="flex items-start gap-2">
+                          <FileText className="h-4 w-4 text-purple-500 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="font-medium text-foreground">Reason:</p>
+                            <p className="text-muted-foreground">{appointment.reason}</p>
+                          </div>
                         </div>
+                        {appointment.symptoms && (
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="h-4 w-4 text-orange-500 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="font-medium text-foreground">Symptoms:</p>
+                              <p className="text-muted-foreground text-xs">{appointment.symptoms}</p>
+                            </div>
+                          </div>
+                        )}
                         {appointment.notes && (
-                          <div className="flex items-center gap-2 col-span-2 text-xs">
-                            <span className="font-medium">Notes:</span>
-                            <span>{appointment.notes}</span>
+                          <div className="flex items-start gap-2">
+                            <FileText className="h-4 w-4 text-gray-500 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="font-medium text-foreground">Notes:</p>
+                              <p className="text-muted-foreground text-xs">{appointment.notes}</p>
+                            </div>
                           </div>
                         )}
                       </div>
+                      {appointment.status === 'pending' && (
+                        <div className="flex gap-2 pt-2 border-t">
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <Phone className="h-3 w-3 mr-1" />
+                            Contact Vet
+                          </Button>
+                          <Button variant="outline" size="sm" className="flex-1 text-red-600 hover:text-red-700">
+                            Cancel
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
