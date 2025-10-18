@@ -15,6 +15,26 @@ router.use(verifyToken);
 router.get('/', appointmentController.getUserAppointments);
 
 /**
+ * @route   GET /api/appointments/upcoming
+ * @desc    Get upcoming appointments for authenticated user
+ * @access  Private
+ */
+router.get('/upcoming', (req, res, next) => {
+  req.query.upcoming = 'true';
+  appointmentController.getUserAppointments(req, res, next);
+});
+
+/**
+ * @route   GET /api/appointments/past
+ * @desc    Get past appointments for authenticated user
+ * @access  Private
+ */
+router.get('/past', (req, res, next) => {
+  req.query.past = 'true';
+  appointmentController.getUserAppointments(req, res, next);
+});
+
+/**
  * @route   GET /api/appointments/available-slots
  * @desc    Get available time slots for a vet on a specific date
  * @access  Private

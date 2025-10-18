@@ -21,12 +21,16 @@ const getUserAppointments = async (req, res) => {
       });
     }
 
+    console.log(`[GET_APPOINTMENTS] User ${user._id}, upcoming=${upcoming}, past=${past}, status=${status}`);
+
     const options = {};
     if (status) options.status = status;
     if (upcoming === 'true') options.upcoming = true;
     if (past === 'true') options.past = true;
 
     const appointments = await Appointment.findByUser(user._id, options);
+
+    console.log(`[GET_APPOINTMENTS] Found ${appointments.length} appointments for user ${user._id}`);
 
     res.status(200).json({
       success: true,
@@ -71,8 +75,8 @@ const getAppointmentById = async (req, res) => {
       });
     }
 
-    // Verify ownership
-    if (appointment.user.toString() !== user._id.toString()) {
+    // Verify ownership or allow admin
+    if (appointment.user.toString() !== user._id.toString() && user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to view this appointment',
@@ -242,8 +246,8 @@ const updateAppointment = async (req, res) => {
       });
     }
 
-    // Verify ownership
-    if (appointment.user.toString() !== user._id.toString()) {
+    // Verify ownership or admin role
+    if (appointment.user.toString() !== user._id.toString() && user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to update this appointment',
@@ -336,8 +340,8 @@ const cancelAppointment = async (req, res) => {
       });
     }
 
-    // Verify ownership
-    if (appointment.user.toString() !== user._id.toString()) {
+    // Verify ownership or admin role
+    if (appointment.user.toString() !== user._id.toString() && user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to cancel this appointment',
