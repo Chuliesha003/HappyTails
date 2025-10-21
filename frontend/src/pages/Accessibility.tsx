@@ -166,7 +166,7 @@ const Accessibility = () => {
                 <p className="text-teal-700 mb-3">
                   Accessibility of HappyTails relies on the following technologies:
                 </p>
-                <div className="grid md:grid-cols-3 gap-3">
+                <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   <div className="bg-white p-3 rounded border text-center">
                     <h4 className="font-semibold text-teal-800">HTML5</h4>
                     <p className="text-sm text-teal-700">Semantic markup</p>
@@ -178,6 +178,22 @@ const Accessibility = () => {
                   <div className="bg-white p-3 rounded border text-center">
                     <h4 className="font-semibold text-teal-800">JavaScript</h4>
                     <p className="text-sm text-teal-700">Enhanced interactions</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border text-center">
+                    <h4 className="font-semibold text-teal-800">TypeScript</h4>
+                    <p className="text-sm text-teal-700">Typing & reliability</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border text-center">
+                    <h4 className="font-semibold text-teal-800">React</h4>
+                    <p className="text-sm text-teal-700">Component-based UI</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border text-center">
+                    <h4 className="font-semibold text-teal-800">Tailwind CSS</h4>
+                    <p className="text-sm text-teal-700">Utility-first styling</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border text-center">
+                    <h4 className="font-semibold text-teal-800">Node.js & Express</h4>
+                    <p className="text-sm text-teal-700">Backend APIs</p>
                   </div>
                 </div>
               </div>

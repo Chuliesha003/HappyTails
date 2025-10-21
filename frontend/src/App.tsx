@@ -36,6 +36,7 @@ const queryClient = new QueryClient();
 const ProtectedPetRecords = withAuth(PetRecords);
 const ProtectedUserDashboard = withAuth(UserDashboard);
 const ProtectedBookAppointment = withAuth(BookAppointment);
+const ProtectedVets = withAuth(Vets);
 const ProtectedAdminDashboard = withRole(AdminDashboard, { allowedRoles: ['admin'] });
 
 const AppContent = () => {
@@ -52,7 +53,7 @@ const AppContent = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/get-started" element={<GetStarted />} />
         <Route path="/symptom-checker" element={<SymptomCheckerPage />} />
-        <Route path="/vets" element={<Vets />} />
+        <Route path="/vets" element={<ProtectedVets />} />
         <Route path="/resources" element={<Resources />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
