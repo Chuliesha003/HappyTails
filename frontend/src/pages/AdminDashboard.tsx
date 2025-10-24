@@ -1371,7 +1371,7 @@ const AdminDashboard = () => {
                         <TableCell className="text-sm text-muted-foreground">{pet.species}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{pet.breed}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {typeof pet.owner === 'object' ? pet.owner.fullName : 'Unknown'}
+                          {typeof pet.owner === 'object' && pet.owner ? pet.owner.fullName : 'Unknown'}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {pet.age ? `${pet.age} ${pet.ageUnit || 'years'}` : 'Unknown'}
