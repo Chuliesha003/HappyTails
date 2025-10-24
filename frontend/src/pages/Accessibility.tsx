@@ -166,7 +166,7 @@ const Accessibility = () => {
                 <p className="text-teal-700 mb-3">
                   Accessibility of HappyTails relies on the following technologies:
                 </p>
-                <div className="grid md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   <div className="bg-white p-3 rounded border text-center">
                     <h4 className="font-semibold text-teal-800">HTML5</h4>
                     <p className="text-sm text-teal-700">Semantic markup</p>
@@ -178,6 +178,42 @@ const Accessibility = () => {
                   <div className="bg-white p-3 rounded border text-center">
                     <h4 className="font-semibold text-teal-800">JavaScript</h4>
                     <p className="text-sm text-teal-700">Enhanced interactions</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border text-center">
+                    <h4 className="font-semibold text-teal-800">TypeScript</h4>
+                    <p className="text-sm text-teal-700">Type safety</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border text-center">
+                    <h4 className="font-semibold text-teal-800">React</h4>
+                    <p className="text-sm text-teal-700">Component-based UI</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border text-center">
+                    <h4 className="font-semibold text-teal-800">Tailwind CSS</h4>
+                    <p className="text-sm text-teal-700">Utility-first styling</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border text-center">
+                    <h4 className="font-semibold text-teal-800">Node.js</h4>
+                    <p className="text-sm text-teal-700">Backend runtime</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border text-center">
+                    <h4 className="font-semibold text-teal-800">Express.js</h4>
+                    <p className="text-sm text-teal-700">API framework</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border text-center">
+                    <h4 className="font-semibold text-teal-800">MongoDB</h4>
+                    <p className="text-sm text-teal-700">Database</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border text-center">
+                    <h4 className="font-semibold text-teal-800">Firebase</h4>
+                    <p className="text-sm text-teal-700">Authentication</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border text-center">
+                    <h4 className="font-semibold text-teal-800">Vite</h4>
+                    <p className="text-sm text-teal-700">Build tool</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border text-center">
+                    <h4 className="font-semibold text-teal-800">Google Gemini AI</h4>
+                    <p className="text-sm text-teal-700">AI-powered features</p>
                   </div>
                 </div>
               </div>
