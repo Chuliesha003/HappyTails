@@ -20,6 +20,9 @@ const SiteHeader = () => {
   const { isRegistered, user, logout, canAccessFeature, getUserRole, isAdmin } = useAuth();
   const userRole = getUserRole();
   
+  // Debug: Log auth state on every render
+  console.log('🔍 SiteHeader render - User:', user?.email, 'Role:', userRole, 'isRegistered:', isRegistered(), 'isAdmin:', isAdmin());
+  
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
     isActive
       ? "text-primary"
@@ -49,6 +52,7 @@ const SiteHeader = () => {
         if (item.role === "registered" && !isAdmin() && isRegistered()) return true;
         return false;
       });
+      console.log('Dashboard items:', dashboards, 'isAdmin:', isAdmin(), 'isRegistered:', isRegistered());
     } else {
       dashboards = [];
     }
