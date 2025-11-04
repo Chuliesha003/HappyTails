@@ -155,11 +155,6 @@ const FAQ = () => {
                 </div>
               </div>
             </div>
-            <div className="mt-6">
-              <button className="bg-cyan-600 text-white px-6 py-3 rounded-lg hover:bg-cyan-700 transition-colors font-medium">
-                Start Live Chat
-              </button>
-            </div>
           </div>
 
           <div className="mt-8 text-center">
