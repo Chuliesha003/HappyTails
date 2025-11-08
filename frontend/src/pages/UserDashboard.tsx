@@ -64,14 +64,28 @@ const UserDashboard = () => {
     if (!confirmed) return;
 
     try {
+      console.log('[CANCEL] Starting cancellation for appointment:', id);
       setCancellingAppointmentId(id);
-      await appointmentsService.cancelAppointment(id);
-      // Optimistically remove from upcoming list
-      setAppointments((prev) => prev.filter((a) => a.id !== id));
-      toast({ title: 'Appointment cancelled', description: 'Your appointment was cancelled successfully.' });
+      
+      const result = await appointmentsService.cancelAppointment(id);
+      console.log('[CANCEL] Cancellation result:', result);
+      
+      toast({ 
+        title: 'Appointment cancelled', 
+        description: 'Your appointment was cancelled successfully.' 
+      });
+      
+      console.log('[CANCEL] Reloading appointments...');
+      // Reload appointments from server to ensure consistency
+      await loadAppointments();
+      console.log('[CANCEL] Appointments reloaded');
     } catch (error) {
-      console.error('Failed to cancel appointment:', error);
-      toast({ title: 'Error', description: 'Failed to cancel appointment. Please try again.', variant: 'destructive' });
+      console.error('[CANCEL] Failed to cancel appointment:', error);
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to cancel appointment. Please try again.', 
+        variant: 'destructive' 
+      });
     } finally {
       setCancellingAppointmentId(null);
     }
@@ -79,11 +93,13 @@ const UserDashboard = () => {
 
   const loadAppointments = async () => {
     try {
+      console.log('[LOAD_APPTS] Loading appointments...');
       setIsLoadingAppointments(true);
       const data = await appointmentsService.getUpcomingAppointments();
+      console.log('[LOAD_APPTS] Loaded appointments:', data);
       setAppointments(data);
     } catch (error) {
-      console.error('Failed to load appointments:', error);
+      console.error('[LOAD_APPTS] Failed to load appointments:', error);
       toast({
         title: "Error",
         description: "Failed to load appointments. Please try again.",

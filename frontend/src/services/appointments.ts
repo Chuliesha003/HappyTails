@@ -60,10 +60,14 @@ export const appointmentsService = {
   /**
    * Cancel an appointment
    */
-  cancelAppointment: async (id: string): Promise<Appointment> => {
+  cancelAppointment: async (id: string): Promise<void> => {
     try {
-      return await appointmentsService.updateAppointmentStatus(id, 'cancelled');
+      console.log('[SERVICE] Cancelling appointment:', id);
+      const response = await api.delete<{ success: boolean; message: string }>(`/appointments/${id}`);
+      console.log('[SERVICE] Cancel response:', response);
+      return;
     } catch (error) {
+      console.error('[SERVICE] Cancel error:', error);
       throw handleApiError(error);
     }
   },
