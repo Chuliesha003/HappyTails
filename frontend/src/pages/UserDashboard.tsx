@@ -34,6 +34,7 @@ const UserDashboard = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoadingPets, setIsLoadingPets] = useState(true);
   const [isLoadingAppointments, setIsLoadingAppointments] = useState(true);
+  const [cancellingAppointmentId, setCancellingAppointmentId] = useState<string | null>(null);
 
   useEffect(() => {
     loadPets();
@@ -54,6 +55,25 @@ const UserDashboard = () => {
       });
     } finally {
       setIsLoadingPets(false);
+    }
+  };
+
+  const handleCancelAppointment = async (id: string) => {
+    if (!id) return;
+    const confirmed = window.confirm('Are you sure you want to cancel this appointment?');
+    if (!confirmed) return;
+
+    try {
+      setCancellingAppointmentId(id);
+      await appointmentsService.cancelAppointment(id);
+      // Optimistically remove from upcoming list
+      setAppointments((prev) => prev.filter((a) => a.id !== id));
+      toast({ title: 'Appointment cancelled', description: 'Your appointment was cancelled successfully.' });
+    } catch (error) {
+      console.error('Failed to cancel appointment:', error);
+      toast({ title: 'Error', description: 'Failed to cancel appointment. Please try again.', variant: 'destructive' });
+    } finally {
+      setCancellingAppointmentId(null);
     }
   };
 
@@ -362,8 +382,18 @@ const UserDashboard = () => {
                             <Phone className="h-3 w-3 mr-1" />
                             Contact Vet
                           </Button>
-                          <Button variant="outline" size="sm" className="flex-1 text-red-600 hover:text-red-700">
-                            Cancel
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 text-red-600 hover:text-red-700"
+                            disabled={cancellingAppointmentId === appointment.id}
+                            onClick={() => handleCancelAppointment(appointment.id)}
+                          >
+                            {cancellingAppointmentId === appointment.id ? (
+                              <span className="inline-flex items-center"><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Cancelling...</span>
+                            ) : (
+                              'Cancel'
+                            )}
                           </Button>
                         </div>
                       )}
