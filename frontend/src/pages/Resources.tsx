@@ -324,6 +324,16 @@ const Resources = () => {
           </div>
         )}
       </Tabs>
+
+      {/* Full article modal */}
+      <ArticleModal
+        article={openArticle}
+        open={isArticleModalOpen}
+        onOpenChange={(open) => {
+          setIsArticleModalOpen(open);
+          if (!open) setOpenArticle(null);
+        }}
+      />
     </div>
   );
 };
