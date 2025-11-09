@@ -135,7 +135,7 @@ export default function SymptomChecker() {
       const status = err?.response?.status;
       const serverMsg = err?.response?.data?.message || err?.message || '';
 
-      if (status === 429 || /usage limit/i.test(serverMsg) || /AI service usage limit/i.test(serverMsg)) {
+      if (status === 429 || /usage limit/i.test(serverMsg) || /AI service usage limit/i.test(serverMsg) || /quota/i.test(serverMsg)) {
         // Get Retry-After header if provided (in seconds)
         const retryAfterHeader = err?.response?.headers?.['retry-after'];
         let retrySeconds: number | undefined;
@@ -144,7 +144,7 @@ export default function SymptomChecker() {
           if (!isNaN(parsed)) retrySeconds = parsed;
         }
 
-        const friendly = serverMsg || '🐾 Our AI assistant has reached its limit. Please try again in about an hour.';
+        const friendly = serverMsg || (retrySeconds ? `🐾 AI temporarily paused. Try again in ${Math.ceil(retrySeconds/60)} minutes.` : '🐾 Our AI assistant has reached its limit. Please try again later.');
         setRateLimited({ message: friendly, retryAfterSeconds: retrySeconds });
         if (retrySeconds) setCooldownLeft(retrySeconds);
 
@@ -453,7 +453,7 @@ export default function SymptomChecker() {
                 <div>
                   <AlertTitle>AI temporarily unavailable</AlertTitle>
                   <AlertDescription>
-                    <div className="text-sm">You've reached the AI usage limit. Please try again in about an hour.</div>
+                    <div className="text-sm">{rateLimited?.message || "You've reached the AI usage limit."}</div>
                     {cooldownLeft !== null && (
                       <div className="mt-2 text-xs text-muted-foreground">Retry in {Math.max(1, Math.ceil(cooldownLeft / 60))} minute(s)</div>
                     )}

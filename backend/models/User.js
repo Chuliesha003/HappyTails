@@ -66,16 +66,32 @@ userSchema.virtual('petCount').get(function () {
   return this.pets.length;
 });
 
-// Method to check if user has reached guest usage limit
-userSchema.methods.hasReachedGuestLimit = function () {
-  const GUEST_LIMIT = 3;
-  return this.role === 'user' && this.guestUsageCount >= GUEST_LIMIT;
+// Configurable usage limiting for AI features
+// New generic helpers (backward compatible with old method names)
+userSchema.methods.hasReachedUsageLimit = function () {
+  // Whether to apply limit to registered users
+  const APPLY_TO_REGISTERED = (process.env.SYMPTOM_CHECKER_APPLY_TO_REGISTERED || 'false').toLowerCase() === 'true';
+  // Configurable cap (default high so it's effectively off if not set)
+  const REGISTERED_LIMIT = parseInt(process.env.SYMPTOM_CHECKER_REGISTERED_LIMIT || '50', 10);
+
+  if (!APPLY_TO_REGISTERED) return false; // do not limit registered users unless explicitly enabled
+  // Only apply to standard users (not admin/vet)
+  if (this.role !== 'user') return false;
+  return this.guestUsageCount >= REGISTERED_LIMIT;
 };
 
-// Method to increment guest usage count
-userSchema.methods.incrementGuestUsage = async function () {
+userSchema.methods.incrementUsageCount = async function () {
   this.guestUsageCount += 1;
   return await this.save();
+};
+
+// Backward compatibility: old names delegate to new helpers
+userSchema.methods.hasReachedGuestLimit = function () {
+  return this.hasReachedUsageLimit();
+};
+
+userSchema.methods.incrementGuestUsage = async function () {
+  return await this.incrementUsageCount();
 };
 
 // Method to get safe user object (without sensitive data)

@@ -31,18 +31,19 @@ const checkSymptoms = async (req, res) => {
       user = await User.findByFirebaseUid(req.user.uid);
 
       if (user) {
-        // Check if user has reached limit
-        if (user.hasReachedGuestLimit()) {
+        // Check if user has reached configurable limit
+        if (user.hasReachedUsageLimit()) {
+          const retryAfterSeconds = parseInt(process.env.SYMPTOM_CHECKER_COOLDOWN_SECONDS || '3600', 10);
+          res.setHeader('Retry-After', retryAfterSeconds.toString());
           return res.status(429).json({
             success: false,
-            message: 'You have reached your usage limit. Please upgrade your account or contact support.',
+            message: 'AI usage limit reached for today. Please try again later or contact support to extend your quota.',
             usageCount: user.guestUsageCount,
-            limit: 3,
+            limit: process.env.SYMPTOM_CHECKER_REGISTERED_LIMIT || '50',
+            retryAfterSeconds,
           });
         }
-
-        // Increment usage count
-        await user.incrementGuestUsage();
+        await user.incrementUsageCount();
       }
     }
 
@@ -142,9 +143,12 @@ const checkSymptoms = async (req, res) => {
     }
 
     if (error.message.includes('quota')) {
+      const retryAfterSeconds = 300; // 5 min suggested backoff
+      res.setHeader('Retry-After', retryAfterSeconds.toString());
       return res.status(429).json({
         success: false,
-        message: 'Service temporarily unavailable due to high demand. Please try again in a few minutes.',
+        message: 'AI service quota temporarily exceeded. Please retry shortly.',
+        retryAfterSeconds,
       });
     }
 
