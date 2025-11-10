@@ -94,24 +94,24 @@ export default function SymptomChecker() {
       // Transform the response to match our expected format
       const data: SymptomAnalysisResponse = {
         conditions: Array.isArray(result.data.conditions)
-          ? result.data.conditions.map((c: AICondition | string) => ({
+          ? result.data.conditions.map((c: any) => ({
               name: typeof c === 'string' ? c : c.name || 'Unknown condition',
-              urgency: result.data.overallUrgency === 'high' ? 'high' :
-                      result.data.overallUrgency === 'moderate' ? 'moderate' : 'low',
-              description: typeof c === 'object' && c.rationale ? c.rationale : 'Further evaluation needed',
-              firstAidTips: Array.isArray(result.data.careTips) ? result.data.careTips.slice(0, 3) : [],
-              recommendations: []
+              urgency: (c.severity || result.data.overallUrgency) === 'high' || (c.severity || result.data.overallUrgency) === 'emergency' ? 'high' :
+                      (c.severity || result.data.overallUrgency) === 'moderate' || (c.severity || result.data.overallUrgency) === 'medium' ? 'moderate' : 'low',
+              description: typeof c === 'object' ? (c.summary || c.rationale || c.description || 'Further evaluation needed') : 'Further evaluation needed',
+              firstAidTips: Array.isArray(c.immediateCare) ? c.immediateCare : (Array.isArray(result.data.careTips) ? result.data.careTips.slice(0, 3) : []),
+              recommendations: Array.isArray(c.recommendations) ? c.recommendations : []
             }))
           : [{
               name: 'Analysis completed',
-              urgency: result.data.overallUrgency === 'high' ? 'high' :
-                      result.data.overallUrgency === 'moderate' ? 'moderate' : 'low',
+              urgency: result.data.overallUrgency === 'high' || result.data.overallUrgency === 'emergency' ? 'high' :
+                      result.data.overallUrgency === 'moderate' || result.data.overallUrgency === 'medium' ? 'moderate' : 'low',
               description: 'Please review the care tips below',
               firstAidTips: Array.isArray(result.data.careTips) ? result.data.careTips.slice(0, 3) : [],
               recommendations: []
             }],
-        overallUrgency: result.data.overallUrgency === 'high' ? 'high' :
-                       result.data.overallUrgency === 'moderate' ? 'moderate' : 'low',
+        overallUrgency: result.data.overallUrgency === 'high' || result.data.overallUrgency === 'emergency' ? 'high' :
+                       result.data.overallUrgency === 'moderate' || result.data.overallUrgency === 'medium' ? 'moderate' : 'low',
         disclaimerShown: true
       };
 

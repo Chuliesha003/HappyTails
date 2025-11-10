@@ -3,7 +3,7 @@ const router = express.Router();
 const symptomController = require('../controllers/symptomController');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
-const { optionalAuth } = require('../middleware/auth');
+const { optionalAuth, verifyToken } = require('../middleware/auth');
 const { aiLimiter } = require('../middleware/security');
 
 /**
@@ -106,6 +106,6 @@ router.get('/usage', optionalAuth, symptomController.getUsageStats);
  * @desc    Get symptom check history for authenticated user
  * @access  Private
  */
-router.get('/history', symptomController.getSymptomCheckHistory);
+router.get('/history', verifyToken, symptomController.getSymptomCheckHistory);
 
 module.exports = router;

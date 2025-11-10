@@ -40,6 +40,12 @@ export const symptomsService = {
     petAge?: number
   ): Promise<{ ok: boolean; data?: any; error?: string }> => {
     try {
+      console.log('📤 Sending symptom analysis with photo...');
+      console.log('  Symptoms:', symptoms);
+      console.log('  Photo:', photo.name, photo.type, photo.size, 'bytes');
+      console.log('  Pet Type:', petType);
+      console.log('  Pet Age:', petAge);
+      
       const formData = new FormData();
       formData.append('symptoms', symptoms);
       formData.append('photo', photo);

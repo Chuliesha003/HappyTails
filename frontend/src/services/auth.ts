@@ -30,7 +30,10 @@ export const authService = {
         isNewUser: response.isNewUser,
       };
       
-      // Store user data in localStorage
+      // Store token and user data in localStorage
+      if (authResponse.token) {
+        localStorage.setItem('happytails_token', authResponse.token);
+      }
       if (authResponse.user) {
         localStorage.setItem('happytails_user', JSON.stringify(authResponse.user));
       }

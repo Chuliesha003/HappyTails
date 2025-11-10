@@ -50,9 +50,34 @@ const checkSymptoms = async (req, res) => {
     // Prepare image if uploaded via multipart
     let imageBase64 = null;
     let imageMimeType = null;
+    let imageDataUri = null;
+    
     if (req.file && req.file.buffer) {
+      // Validate image file size and type
+      const maxSize = 5 * 1024 * 1024; // 5MB limit
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.',
+        });
+      }
+      
+      if (req.file.size > maxSize) {
+        return res.status(400).json({
+          success: false,
+          message: 'File size too large. Maximum size is 5MB.',
+        });
+      }
+      
       imageBase64 = req.file.buffer.toString('base64');
       imageMimeType = req.file.mimetype || 'image/jpeg';
+      
+      // Create data URI for storing in database (more efficient than separate fields)
+      imageDataUri = `data:${imageMimeType};base64,${imageBase64}`;
+      
+      console.log('✅ Image received and encoded for database storage');
     }
 
     // Analyze symptoms using Gemini AI (with optional image)
@@ -78,7 +103,7 @@ const checkSymptoms = async (req, res) => {
       },
       followUpAction: (analysis.urgencyLevel === 'emergency' || analysis.rawParsed?.urgencyLevel === 'emergency') ? 'emergency' : 
                        (analysis.urgencyLevel === 'high' || analysis.rawParsed?.urgencyLevel === 'high') ? 'schedule' : 'monitor',
-      imageUrl: imageUrl || null,
+      imageUrl: imageDataUri || imageUrl || null, // Store base64 data URI directly in database
     };
 
     // Add user and pet references if available
@@ -100,8 +125,16 @@ const checkSymptoms = async (req, res) => {
     symptomCheckData.ipAddress = req.ip || req.connection.remoteAddress;
 
     // Save to database
+    console.log('💾 Saving symptom check to database...');
+    console.log('📝 Symptoms:', symptomCheckData.symptoms);
+    console.log('🖼️ Image URL (truncated):', imageDataUri ? imageDataUri.substring(0, 50) + '...' : 'No image');
+    console.log('👤 User ID:', symptomCheckData.user || 'Guest');
+    
     const symptomCheck = new SymptomCheck(symptomCheckData);
     await symptomCheck.save();
+    
+    console.log('✅ Symptom check saved with ID:', symptomCheck._id);
+    console.log('✅ Image stored:', symptomCheck.imageUrl ? 'Yes' : 'No');
 
     // Use AI-provided structured fields and perform minimal normalization
     const aiConditions = Array.isArray(analysis.conditions) ? analysis.conditions : Array.isArray(analysis.rawParsed?.conditions) ? analysis.rawParsed.conditions : [];
@@ -118,12 +151,28 @@ const checkSymptoms = async (req, res) => {
 
     await symptomCheck.save();
 
+    // Extract care tips from conditions for frontend compatibility
+    const careTips = [];
+    if (Array.isArray(aiConditions)) {
+      aiConditions.forEach(condition => {
+        if (condition.immediateCare && Array.isArray(condition.immediateCare)) {
+          careTips.push(...condition.immediateCare);
+        }
+      });
+    }
+    // Add general recommendations
+    if (analysis.recommendations && Array.isArray(analysis.recommendations)) {
+      careTips.push(...analysis.recommendations);
+    }
+
     res.status(200).json({
       success: true,
       data: {
         conditions: aiConditions,
         overallUrgency,
+        careTips: careTips.slice(0, 10), // Limit to 10 tips
         disclaimerShown: true,
+        imageUrl: imageDataUri || imageUrl || null, // Include base64 data URI in response
       },
       analysis,
       symptomCheckId: symptomCheck._id,

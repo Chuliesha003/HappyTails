@@ -98,6 +98,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (firebaseUser) {
         try {
+          // Get fresh Firebase token and store it
+          const idToken = await firebaseUser.getIdToken(true);
+          localStorage.setItem('happytails_token', idToken);
+          console.log('✅ Token stored in localStorage from onAuthStateChanged');
+          
           // Get user details from backend
           const apiUser = await authService.getCurrentUser();
           setUser(convertApiUser(apiUser));
@@ -169,6 +174,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       console.log('Backend response:', response);
       
+      // Store token in localStorage for axios interceptor fallback
+      if (response.token) {
+        localStorage.setItem('happytails_token', response.token);
+      }
+      
       // Set user state
       setUser(convertApiUser(response.user));
       
@@ -237,6 +247,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       
       console.log('Backend response:', response);
+      
+      // Store token in localStorage for axios interceptor fallback
+      if (response.token) {
+        localStorage.setItem('happytails_token', response.token);
+      }
       
       // Set user state
       setUser(convertApiUser(response.user));

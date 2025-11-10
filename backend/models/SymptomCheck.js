@@ -41,7 +41,9 @@ const symptomCheckSchema = new mongoose.Schema(
       maxlength: [2000, 'Symptoms description cannot exceed 2000 characters'],
     },
     
-    // Image URL if user uploaded a photo
+    // Image URL or base64 data URI if user uploaded a photo
+    // Note: MongoDB has a 16MB document size limit. Base64 increases size by ~33%.
+    // Recommended: Keep original images under 5MB to stay well within limits.
     imageUrl: {
       type: String,
       trim: true,

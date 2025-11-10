@@ -145,6 +145,17 @@ export default function SymptomCheckHistory({ refreshKey }: { refreshKey?: numbe
 
                   <div className="text-sm text-gray-700 line-clamp-3 mb-3">{check.symptoms}</div>
 
+                  {check.imageUrl && (
+                    <div className="mb-3">
+                      <img 
+                        src={check.imageUrl} 
+                        alt="Symptom check photo" 
+                        className="w-full h-32 object-cover rounded-md border border-gray-200"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between">
                     <button onClick={() => toggleExpanded(check._id)} className="text-xs text-primary underline">View</button>
                     <div className="text-xs text-muted-foreground">{check.aiResponse.possibleConditions?.length || 0} conditions</div>

@@ -57,21 +57,27 @@ axiosInstance.interceptors.request.use(
       }
       
       // Get current Firebase user
-        const currentUser = auth.currentUser;
+      const currentUser = auth.currentUser;
 
-        if (currentUser && config.headers) {
-          // Get fresh Firebase ID token
-          const idToken = await currentUser.getIdToken();
-          config.headers.Authorization = `Bearer ${idToken}`;
+      if (currentUser && config.headers) {
+        // Get fresh Firebase ID token
+        const idToken = await currentUser.getIdToken(true); // Force refresh
+        console.log('🔑 Using fresh Firebase token from currentUser');
+        config.headers.Authorization = `Bearer ${idToken}`;
+        // Also update localStorage with fresh token
+        localStorage.setItem('happytails_token', idToken);
+      } else {
+        // Fallback: if Firebase currentUser is not available (e.g. during rehydrate),
+        // try to use the stored token from localStorage so users who have a saved
+        // session in localStorage are not treated as unauthenticated immediately.
+        const fallbackToken = localStorage.getItem('happytails_token');
+        if (fallbackToken && config.headers) {
+          console.log('🔑 Using fallback token from localStorage');
+          config.headers.Authorization = `Bearer ${fallbackToken}`;
         } else {
-          // Fallback: if Firebase currentUser is not available (e.g. during rehydrate),
-          // try to use the stored token from localStorage so users who have a saved
-          // session in localStorage are not treated as unauthenticated immediately.
-          const fallbackToken = localStorage.getItem('happytails_token');
-          if (fallbackToken && config.headers) {
-            config.headers.Authorization = `Bearer ${fallbackToken}`;
-          }
+          console.warn('⚠️ No auth token available - neither currentUser nor localStorage token');
         }
+      }
     } catch (error) {
       console.warn('Unable to attach Firebase token:', error);
       // Continue with the request even if token fetch fails
