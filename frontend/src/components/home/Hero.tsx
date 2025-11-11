@@ -1,19 +1,22 @@
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-import heroPets from "@/assets/hero-pets-real.jpeg";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom"; // for navigating between pages
+import { useState } from "react"; // for managing input state
+import heroPets from "@/assets/hero-pets-real.jpeg"; // image shown on right side
+import { Input } from "@/components/ui/input"; // custom input field
+import { Button } from "@/components/ui/button"; // custom button component
+
 
 const Hero = () => {
-  const [q, setQ] = useState("");
-  const navigate = useNavigate();
-
+  const [q, setQ] = useState("");   // store search text entered by user
+  const navigate = useNavigate(); // connector to navigate programmatically
+   // function that runs when form is submitted
   const onSearch = (e?: React.FormEvent) => {
-    e?.preventDefault();
+    e?.preventDefault(); // stop page reload
+     // go to /vets page with search text as URL parameter
     navigate(`/vets?q=${encodeURIComponent(q)}`);
   };
 
   return (
+    // background area of Hero section
     <section className="relative overflow-hidden">
       <div className="absolute inset-0 -z-10 opacity-80" aria-hidden>
         <div className="h-full w-full bg-gradient-primary" />
@@ -33,26 +36,27 @@ const Hero = () => {
             <Input
               aria-label="Search veterinarians near you"
               placeholder="Find a Veterinarian"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="h-12 text-base"
+              value={q}  // input value
+              onChange={(e) => setQ(e.target.value)} // update search text
+              className="h-12 text-base" // input height and font size
             />
             <Button type="submit" variant="cta" size="lg" className="h-12 px-6 whitespace-nowrap">
               Find a Vet
             </Button>
           </form>
         </div>
-
+        
         <div className="relative animate-fade-in">
           <div className="aspect-[16/9] overflow-hidden rounded-xl">
             <img
-              src={heroPets}
+              src={heroPets} // imported hero image
               alt="Adorable group of puppies and kittens sitting together - black and white puppies with orange and gray kittens"
               className="w-full h-full object-cover rounded-xl shadow-elevated transition-transform duration-300 hover:scale-105"
-              loading="eager"
-              sizes="(max-width: 768px) 100vw, 50vw"
+              loading="eager" // load image quickly
+              sizes="(max-width: 768px) 100vw, 50vw" // responsive image sizing
             />
           </div>
+          
           <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-white/20" aria-hidden />
         </div>
       </div>

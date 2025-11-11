@@ -169,7 +169,7 @@ const Resources = () => {
         <meta name="description" content="Browse articles and videos on nutrition and common diseases for pets." />
         <link rel="canonical" href="/resources" />
       </Helmet>
-
+      {/* Page header with title and description */}
       <header className="space-y-2 text-center">
         <h1 className="text-4xl font-bold text-gray-900">Pet Care Articles</h1>
         <p className="text-gray-600">Comprehensive resources for pet health and wellness.</p>
@@ -252,6 +252,7 @@ const Resources = () => {
 
               return (
                 <article key={article.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+                  {/* Article image */}
                   <div className="w-full h-48 bg-gray-100 overflow-hidden">
                     <SafeImg
                       src={imgSrc}
@@ -268,7 +269,9 @@ const Resources = () => {
                       </span>
                     )}
                   </div>
+                  {/* Article title */}
                   <h2 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">{article.title}</h2>
+                  {/* Article content */}
                   <p className="text-gray-600 text-sm mb-4 line-clamp-3">
                     {article.content.substring(0, 220)}...
                   </p>

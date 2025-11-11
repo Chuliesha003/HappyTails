@@ -154,6 +154,7 @@ const ArticleForm = ({ article, trigger, onSuccess }: ArticleFormProps) => {
                 value={formData.category}
                 onValueChange={(value: 'nutrition' | 'training' | 'health' | 'general') => setFormData(prev => ({ ...prev, category: value }))}
               >
+                // Article category
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
