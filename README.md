@@ -1,3 +1,11 @@
+## Project Contribution
+
+This project was developed as a group academic project.
+
+My contributions include:
+-Frontend – Technical Documentation & QA 
+
+
 <div align="center">
 
 # 🐾 HappyTails
